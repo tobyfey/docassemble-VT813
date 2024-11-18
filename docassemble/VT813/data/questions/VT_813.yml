@@ -1,0 +1,3297 @@
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - docassemble.ALToolbox:phone-number-validation.yml
+  - docassemble.ALToolbox:al_income.yml
+  - docassemble.VTSharedYMLFile:VTSharedYMLFile.yml
+
+---
+objects:
+  - all_courts: ALCourtLoader.using(file_name='courts_list_full.xlsx')
+---
+modules:
+  - .al_income_move
+  - docassemble.demo.accordion
+---
+code: |
+  trial_court_index = all_courts.matching_courts_in_county(county_name=user_selected_county,search_columns=['division_abbr'],search_string='civil')[0][0]
+---
+objects:
+  - users: ALPeopleList.using(ask_number=True,target_number=1)
+  - jobs: ALItemizedJobList.using(complete_attribute="complete", ask_number=True)
+---
+objects:
+  - jobs[i].to_add: ALItemizedValueDict.using(complete_attribute="complete", there_are_any=True)
+---
+comment: |
+  Global interview metadata
+metadata:
+  al_weaver_version: "1.7.0"
+  generated on: "2022-08-19"
+  title: >-
+    Fee Waiver
+  short title: >-
+    Fee waiver
+  description: |-
+    Fee waiver for Vermont courts. Based on Vermont Judiciary paper form 600-00228 (7/2024).
+  original_form: >-
+    https://www.vermontjudiciary.org/media/47
+  help_page_url: >-
+    https://www.vermontjudiciary.org/self-help/application-waive-filing-fees-and-service-costs
+  help_page_title: >-
+    Application to Waive Filing Fees and Service Costs on the Vermont Judiciary website
+  authors:
+    - VTCourtForms guided interview by Legal Services Vermont / VTLawHelp.org website
+    - Authored by Legal Services Vermont
+  categories:
+    - "FA-00-00-00-00"
+    - "HO-00-00-00-00"
+    - "MO-00-00-00-00"
+  typical role: "plaintiff"
+  generate download screen: True
+---
+# customized feedback form
+code: |   
+  feedback_form = "docassemble.VTFeedback:VTfeedback.yml"
+---
+code: |
+  interview_metadata['main_interview_key'] =  'VT_fee_waiver'
+---
+code: |
+  github_repo_name =  'docassemble-VTFeeWaiver'
+---
+#this will correct the last-updated date that gets shown on About This Form page
+code: |
+  res = github_modified_date(github_user, "docassemble-VTFeeWaiver")
+  if res:
+    package_updated_on = res.format('yyyy-MM-dd')
+  else:
+    package_updated_on = None  
+---
+code: |
+  interview_short_title = "Ask to waive court filing and service fees in Vermont"
+---
+code: |
+  al_form_type = "existing_case" 
+---
+sections:
+  - intro: Is this interview right for you
+  - about_you: You and your household
+  - case_info: Your court case
+  - your_income: Your income
+  - your_expenses: Your expenses
+  - your_assets: Your property and assets
+  - reasons: Other info
+  - review_VT_fee_waiver: Review your answers
+  - sign: Sign your document
+  - get_docs: Download your document
+---
+###This adds the signature feature to the interview###
+code: |
+  signature_fields = ['users[0].signature']
+---
+#################### INTERVIEW ORDER #####################
+---
+comment: |
+  Controls order and branching logic for questions specific to this form
+id: interview_order_VT_fee_waiver
+code: |
+  
+  # Below sets the user_role by asking a question.
+  # You can set user_role directly instead to either 'plaintiff' or 'defendant'
+  nav.set_section('intro')
+
+  VT_fee_waiver_intro
+  set_progress(10)
+  important_notes_to_user
+  #user_ask_role
+  
+  set_progress(10)
+  nav.set_section('about_you')
+  users.gather()
+  users[0].address.address
+  users[0].daytime_phone_number
+  users[0].email
+  household_size
+  
+  nav.set_section('case_info')
+  case_name
+  docket_number
+  
+  #This is where we collect the desired court division and county. With those two pieces of info and our comprehensive courts_list_full spreadsheet, the exact court is determined.
+  user_selected_county
+  trial_court.address.county
+  
+  shared_children.gather()
+  other_children.gather()
+  nav.set_section('your_income')
+  if len(public_benefits) > 0:
+    public_benefits.review_items
+    user_qualifies_interstitial   
+    #if user gets public benefits and they work, they only need to give us their employer name and address, and there's space for two jobs on the form
+    jobs.gather()
+  else:
+    jobs.gather()
+    if len(jobs) > 0:
+      review_jobs
+    set_progress(40)
+    
+    if len(other_incomes) > 0:
+      other_incomes.review_items
+
+    set_progress(50)
+    nav.set_section('your_expenses')
+    expenses_intro
+    if len(household_expenses) > 0:
+      household_expenses.review_items
+    if len(vehicle_expenses) > 0:
+      vehicle_expenses.review_items
+    if len(insurance_expenses) > 0:
+      insurance_expenses.review_items
+    if len(personal_expenses) > 0:
+      personal_expenses.review_items
+    if len(children_expenses) > 0:
+      children_expenses.review_items
+
+    set_progress(60)
+    nav.set_section('your_assets')
+  
+    if len(primary_residence_loans) > 0:
+      primary_residence_loans.review_items
+    if len(other_loans) > 0:
+      other_loans.review_items
+  
+    if len(real_estate_loans) > 0:
+      real_estate_loans.review_items
+    if len(vehicle_loans) > 0:
+      vehicle_loans.review_items
+    if len(credit_card_debt) > 0:
+      credit_card_debt.review_items
+    if len(other_debt) > 0:
+      other_debt.review_items
+        
+    set_progress(70)
+  
+      
+    nav.set_section('reasons')
+    other_reasons_why_cannot_afford
+    set_progress(80)
+    
+  set_progress(90)
+  employer_jobs
+  self_employed_jobs
+  employer_jobs_review_table
+  self_employed_jobs_review_table
+  interview_order_VT_fee_waiver = True
+
+---
+###################### MAIN INTERVIEW ORDER ######################
+comment: |
+  This block includes the logic for standalone interviews.
+  Delete mandatory: True to include in another interview
+mandatory: True
+code: |
+  al_intro_screen
+  interview_order_VT_fee_waiver
+  nav.set_section('review_VT_fee_waiver')
+  trial_court.address.county
+  VT_fee_waiver_preview_question
+  
+
+  nav.set_section('sign')
+  signature_date
+  set_progress(95)
+  al_form_requires_digital_signature = False
+  basic_questions_signature_flow
+  
+    # Store anonymous data for analytics / statistics
+  store_variables_snapshot(
+      persistent=True,
+      data={
+          "zip": showifdef("users[0].address.zip"),
+          "county_where_filing": showifdef("trial_court.address.county"),
+          "court_division_where_filing": showifdef("trial_court.division_abbr"),
+          "gets_public_benefits": showifdef("public_benefits.sources"),
+          "employed": showifdef("employed"),
+          "reached_interview_end": True,
+          "num_forms": len(al_user_bundle.enabled_documents()),
+      },
+  )
+  nav.set_section('get_docs')
+  set_progress(100)
+  VT_fee_waiver_download
+---
+objects:
+  - shared_children: ALPeopleList.using(complete_attribute='complete')
+---
+objects:
+  - other_children: ALPeopleList.using(complete_attribute='complete')
+---
+objects:
+  - shared_children[i].income: ALIncomeList.using(complete_attribute='complete',there_is_another=False)
+---
+code: |
+  shared_children[i].income.gather()
+  shared_children[i].complete = True
+---
+code: |
+  other_children[i].name.first
+  other_children[i].complete = True
+---
+question: Minor Children with the Other Party
+fields:
+  - Do you have Minor Children with the other party?: shared_children.there_are_any
+    datatype: yesnoradio
+---
+question: ${ ordinal(i) } Child with other pary
+fields:
+  - Name: shared_children[i].name
+  - Date of Birth: shared_children[i].birthdate
+  - Address: shared_children[i].address
+  - Are you ordered to pay child support for this child?: shared_children[i].child_support
+    datatype: yesnoradio
+  - Amount Ordered: shared_children[i].child_support_amount
+    datatype: currency
+    show if: shared_children[i].child_support
+  - Amount Paid: shared_children[i].child_support_paid
+    datatype: currency
+    show if: shared_children[i].child_support
+  - State/County of Order: shared_children[i].child_support_state
+    show if: shared_children[i].child_support
+  - Does this child receive any income?: shared_children[i].income.selected_types
+    datatype: checkboxes
+    code: |
+      children_income_ordered
+  - Add another child?: shared_children.there_is_another
+    datatype: yesnoradio
+---
+id: children income
+variable name: shared_children[i].income.terms_ordered
+data: !!omap
+  - disability: "Disability Benefits"
+  - social security: "Social Security Benefits"
+  - other: "Other"
+---
+id: children income ordered object for checkboxes
+objects:
+  - children_income_ordered: DAOrderedDict.using(elements=shared_children[i].income.terms_ordered, auto_gather=False, gathered=True)
+---
+id: children income info for list
+#generic object: ALIncomeList
+reconsider: shared_children[i].income[j].display_name
+question: |
+  Tell us about ${ shared_children[i].income[j].display_name}
+subquestion: |
+  % if j > 1:
+  You have already told us about your benefits from ${ comma_and_list(shared_children_income.display_name for shared_children_income in shared_children[i].income.complete_elements()) }.
+  % endif
+fields:
+  - Source of income: shared_children[i].income[j].source
+    input type: dropdown
+    code: |
+      children_income_ordered
+  - What type of income?: shared_children[i].income[j].source_other
+    maxlength: 14
+    show if:
+      variable: shared_children[i].income[j].source
+      is: other
+  - Times per year you receive this income: shared_children[i].income[j].times_per_year
+    input type: radio
+    default: 12
+    code: |
+      times_per_year_list
+  - Amount of income: shared_children[i].income[j].value
+    datatype: currency
+  - Name of Parent who receives the child's benefit: shared_children[i].income[j].parent
+validation code: |
+  if shared_children[i].income[j].source != "other":
+    shared_children[i].income[j].display_name = shared_children[i].income.terms_ordered.get(shared_children[i].income[j].source, shared_children[i].income[j].source)
+  else:
+    shared_children[i].income[j].display_name = shared_children[i].income[j].source_other
+---
+id: children income set display name
+code: |
+  if defined('shared_children[i].income[j].source') and shared_children[i].income[j].source != "other":
+    shared_children[i].income[j].display_name = shared_children[i].income.terms_ordered.get(shared_children[i].income[j].source, shared_children[i].income[j].source)
+  elif defined('shared_children[i].income[j].source') and shared_children[i].income[j].source == "other" and defined('shared_children[i].income[j].source_other'):
+    shared_children[i].income[j].display_name = shared_children[i].income[j].source_other
+  else:
+    shared_children[i].income[j].display_name = shared_children_income_other_display
+---
+id: children income other display
+comment: |
+  This keeps the text that may be changed near the top of the public benefits section.
+  Used in:
+  Tell us about ______
+code: |
+  shared_children_income_other_display = "another source of income"
+---
+question: ${ ordinal(i) } Child whom you provide support
+fields:
+  - Name: other_children[i].name.first
+  - Date of Birth: other_children[i].birthdate
+  - Address: other_children[i].address
+  - Are you ordered to pay child support for this child?: other_children[i].child_support
+    datatype: yesnoradio
+  - Amount Ordered: other_children[i].child_support_amount
+    datatype: currency
+    show if: other_children[i].child_support
+  - Amount Paid: other_children[i].child_support_paid
+    datatype: currency
+    show if: other_children[i].child_support
+  - State/County of Order: other_children[i].child_support_state
+    show if: other_children[i].child_support
+  - Add another child?: other_children.there_is_another
+    datatype: yesnoradio
+---
+question: Other Minor Children
+fields:
+  - Do you have other Minor Children for whom you provide support?: other_children.there_are_any
+    datatype: yesnoradio
+---
+################################# PUBLIC BENEFITS ##############################
+comment: |
+  --Notes on how a list is gathered, using public_benefits as an example--
+  
+  Interview calls public_benefits.gather
+
+  Gather looks for .there_are_any
+
+  there_any_any asks for x.selected_types
+
+  if any selected types,
+   move_check_to_lists
+     This creates a number of elements in the list, and deletes 'source' if other, (which may set 'source' to the default, like 'vehicle')
+     also sets .moved for the list
+     
+  there_are_any is set to true
+
+  will then look for complete
+
+  check_for_others will set source
+
+  complete calls for attribute (value for public_benefits) for information question
+  
+  information question calls display name (with reconsider to keep it fresh)
+  
+  answering the question sets display_name fresh with new source_other with validation code
+
+  complete sets display  
+---
+id: public_benefits terms_ordered
+variable name: public_benefits.terms_ordered
+data: !!omap
+  - Reach Up: "Reach Up"
+  - 3SquaresVT: "3SquaresVT (food)"
+  - GA: "General Assistance (GA)"
+  - SSI: "SSI (Supplemental Security Income)" 
+  - Fuel Assist.: "Fuel Assistance"
+  - Housing Assist.: "Housing Assistance (subsidy/voucher/Section 8)"  
+  - Dr Dynasaur: "Dr. Dynasaur"
+  - Medicaid: "Medicaid"
+  - other: "Other"
+---
+id: public_benefits other display
+comment: |
+  This keeps the text that may be changed near the top of the public benefits section.
+  Used in:
+  Tell us about ______
+code: |
+  public_benefits_other_display = "another benefit that provides you income"
+---
+id: public_benefits object
+objects:
+  - public_benefits: ALIncomeList.using(complete_attribute='complete',there_is_another=False)
+---
+id: public_benefits ordered object for checkboxes
+objects:
+  - public_benefits_ordered: DAOrderedDict.using(elements=public_benefits.terms_ordered, auto_gather=False, gathered=True)
+---
+id: ALIncomeList there are any
+generic object: ALIncomeList
+code: |
+  if x.selected_types.any_true():
+    x.move_checks_to_list(selected_terms=x.terms_ordered)
+    x.there_are_any = True
+  else:
+    x.there_are_any = False
+---
+id: are there public benefits
+#public_benefits
+question: |
+  Do you get public assistance?
+subquestion: |
+  Do you get any kind of government benefit that is based on need, disability, dependent children, or another reason based on your income?
+  
+  We've included a few examples below. You can also check "other."
+  
+  Check any that apply to you.
+fields:
+  - no label: public_benefits.selected_types
+    datatype: checkboxes
+    code: |
+      public_benefits_ordered
+---
+id: ALIncome complete
+generic object: ALIncome
+code: |
+  x.value
+  x.complete = True
+---
+id: public benefits info for list
+#generic object: ALIncomeList
+reconsider: public_benefits[i].display_name
+question: |
+  Tell us about ${ public_benefits[i].display_name }
+subquestion: |
+  % if i > 1:
+  You have already told us about your benefits from ${ comma_and_list(public_benefit.display_name for public_benefit in public_benefits.complete_elements()) }.
+  % elif i > 0:
+  You have already told us about your benefits from ${ comma_and_list(public_benefit.display_name for public_benefit in public_benefits.complete_elements()) }.
+  % endif
+fields:
+  - Source of income: public_benefits[i].source
+    input type: dropdown
+    code: |
+      public_benefits_ordered
+  - What type of income?: public_benefits[i].source_other
+    maxlength: 14
+    show if:
+      variable: public_benefits[i].source
+      is: other
+  - Times per year you receive this income: public_benefits[i].times_per_year
+    input type: radio
+    default: 12
+    code: |
+      times_per_year_list
+  - Amount of income: public_benefits[i].value
+    datatype: currency
+validation code: |
+  if public_benefits[i].source != "other":
+    public_benefits[i].display_name = public_benefits.terms_ordered.get(public_benefits[i].source, public_benefits[i].source)
+  else:
+    public_benefits[i].display_name = public_benefits[i].source_other
+---
+id: public_benefits set display name
+code: |
+  if defined('public_benefits[i].source') and public_benefits[i].source != "other":
+    public_benefits[i].display_name = public_benefits.terms_ordered.get(public_benefits[i].source, public_benefits[i].source)
+  elif defined('public_benefits[i].source') and public_benefits[i].source == "other" and defined('public_benefits[i].source_other'):
+    public_benefits[i].display_name = public_benefits[i].source_other
+  else:
+    public_benefits[i].display_name = public_benefits_other_display
+---
+id: want to add more public benefits
+question: Do you want to list any more public assistance?
+subquestion: |
+  Tap Next if you don't have more to add.
+  
+  ${ public_benefits_table }
+  
+  ${ public_benefits.add_action() }
+continue button field: public_benefits.review_items
+---
+id: public_benefits revisit
+continue button field: public_benefits.revisit
+question: |
+  Edit public assistance
+subquestion: |
+  ${ public_benefits_table }
+
+  ${ public_benefits.add_action() }
+---
+id: public_benefits table
+table: public_benefits_table
+rows: public_benefits
+columns:
+  - Source: |
+      row_item.display_name if defined("row_item.source") else ""
+  - Public assistance per month: |
+      currency(row_item.total(times_per_year=12))
+edit:
+  - source
+  - value
+---
+id: user qualifies due to benefits
+continue button field: user_qualifies_interstitial
+question: |
+  You should qualify
+subquestion: |
+  If you get public assistance at this time, you should qualify for a 100% waiver of fees for your case.
+  
+  We can skip some of the questions in the form. 
+  
+  Click Next to answer a few more questions.
+---
+################################# OTHER INCOMES ##############################
+---
+variable name: other_incomes.terms_ordered
+data: !!omap
+  - rental income: "Rental income"
+  - pension: "Retirement/Pension"
+  - unemployment income: "Unemployment benefits"
+  - worker comp: "Worker's Compensation and/or Disability Insurance)"
+  - social security: "Social Security Benefits"
+  - veteran: "Veteran's Benefits (VA)"
+  - interest: "Interest or Dividend Income"
+  - trust: "Trust or Annuity Income"
+  - gift: "Gifts or Prize Money (include lottery winnings)"
+  - alimony: "Spousal Maintenance (Alimony) from the other party in this action)"
+  - alimony other: "Spousal Maintenance (Alimony) from a person not a party in this action)"
+  - other: "Other"
+---
+variable name: help_text
+data: !!omap
+  - unemployment income help: "Enter gross amount of unemployment income -- before taxes were taken out."
+  - default: " "
+---
+## This keeps the text that may be changed near the top of the public benefits section.
+code: |
+  other_incomes_other_display = "other source of income"
+---
+objects:
+  - other_incomes: ALIncomeList.using(complete_attribute='complete',there_is_another=False)
+---
+objects:
+  - other_incomes_ordered: DAOrderedDict.using(elements=other_incomes.terms_ordered, auto_gather=False, gathered=True)
+---
+comment: |
+  will use id: ALIncomeList there are any to set other_incomes.there_are_any
+---
+id: are there other incomes
+#other_incomes
+question: |
+  Do you have other sources of income?
+subquestion: |
+  Check any that apply to you.
+  
+  Do not include employment income.
+fields:
+  - no label: other_incomes.selected_types
+    datatype: checkboxes
+    code: |
+      other_incomes_ordered
+  - note: |
+      **Other kinds of income could include:** disability insurance?, social security?, workers compensation, veteran's income, rental income, interest income, spousal maintenance (alimony), retirement income and annuities.
+---
+comment: |
+  will use id: ALIncome complete to set other_incomes[i].complete
+---
+id: other income info for list
+#generic object: ALIncomeList
+reconsider: other_incomes[i].display_name
+question: |
+  Tell us about your ${ other_incomes[i].display_name.lower() }
+subquestion: |
+  % if i > 1:
+  You have already told us about your incomes from ${ comma_and_list(other_income.display_name for other_income in other_incomes.complete_elements()) }.
+  % elif i > 0:
+  You have already told us about your income from ${ comma_and_list(other_income.display_name for other_income in other_incomes.complete_elements()) }.
+  % endif
+fields:
+  - Source of income: other_incomes[i].source
+    input type: dropdown
+    code: |
+      other_incomes_ordered
+  - What type of income?: other_incomes[i].source_other
+    show if:
+      variable: other_incomes[i].source
+      is: other
+  - Specify Type: other_incomes[i].source_other
+    show if:
+      variable: other_incomes[i].source
+      is: social security
+  - Times per year you receive this income: other_incomes[i].times_per_year
+    input type: radio
+    code: |
+      times_per_year_list
+  - Amount of income: other_incomes[i].value
+    datatype: currency
+  - note: |
+      ${ help_text['unemployment income help'] }
+    show if:
+      variable: other_incomes[i].source
+      is: unemployment income
+  - note: |
+      **Other kinds of income could include:** disability insurance?, social security?, workers compensation, veteran's income, rental income, interest income, spousal maintenance (alimony), retirement income and annuities.
+validation code: |
+  if other_incomes[i].source != "other":
+    other_incomes[i].display_name = other_incomes.terms_ordered.get(other_incomes[i].source, other_incomes[i].source)
+  else:
+    other_incomes[i].display_name = other_incomes[i].source_other
+---
+code: |
+  if defined('other_incomes[i].source') and other_incomes[i].source != "other":
+    other_incomes[i].display_name = other_incomes.terms_ordered.get(other_incomes[i].source, other_incomes[i].source)
+  elif defined('other_incomes[i].source') and other_incomes[i].source == "other" and defined('other_incomes[i].source_other'):
+    other_incomes[i].display_name = other_incomes[i].source_other
+  else:
+    other_incomes[i].display_name = other_incomes_other_display
+---
+id: want to add more other incomes
+question: Do you want to add any more incomes?
+subquestion: |
+  Tap Next if you don't have more to add.
+  
+  ${ other_incomes_table }
+  
+  ${ other_incomes.add_action() }
+continue button field: other_incomes.review_items
+---
+continue button field: other_incomes.revisit
+question: |
+  Edit other incomes
+subquestion: |
+  ${ other_incomes_table }
+
+  ${ other_incomes.add_action() }
+---
+table: other_incomes_table
+rows: other_incomes
+columns:
+  - Source: |
+      row_item.display_name if defined("row_item.source") else ""
+  - Income per month: |
+      currency(row_item.total(times_per_year=12))
+edit:
+  - source
+  - value
+---
+################################# JOBS ##############################
+---
+id: work
+question: |
+  Work
+fields:
+  - "Do you get income from working?": employed
+    datatype: yesnoradio
+---
+code: |
+  if not employed:
+    jobs.target_number = 0
+---
+if: j in ["self employed"]
+id: self employed income
+question: |
+  What do you make in self-employed income each month as a ${ jobs[i].source }?
+subquestion: |
+  
+  Most people report their net income from self-employment. To figure your monthly net income:
+  
+  - Look at your gross income over the last 12 months of self-employment. 
+  - Subtract your business expenses over that time.
+  - Then divide by 12.
+  
+  Or you can:
+  
+  - Look at your most recent IRS Schedule C form from your federal taxes.
+  - Divide the net income by 12.
+fields:
+  - Your monthly net income: jobs[i].to_add[j].value
+    datatype: currency
+---
+if: j in ["self employed"]
+code: |
+  jobs[i].to_add[j].times_per_year = 12
+---
+code: |
+  jobs[i].times_per_year = 12
+---
+generic object: ALItemizedJob
+code: |
+  if len(public_benefits) == 0:
+    x.source
+    x.wages_added
+    x.to_add.gather()
+  if x.is_self_employed:
+    x.times_per_year
+    # for fee waiver form we are not collecting items to subtract from wages
+    # x.to_subtract.gather()
+  else:
+    if not x.is_self_employed:
+      x.employer.name.first    
+  x.complete = True
+---
+generic object: ALItemizedValueDict
+code: |
+  if len(public_benefits) == 0:
+    x.times_per_year
+  x.complete = True
+---
+sets:
+  - x.employer.name.first
+id: employer
+generic object: ALItemizedJob
+question: |
+  Tell us who employs you as a ${ x.source }
+fields:
+  - I am self-employed: x.is_self_employed
+    datatype: yesno
+  - Is this a part time job: x.is_part_time
+    datatype: yesnoradio
+  - Employer's name: x.employer.name.first
+    show if:
+      variable: x.is_self_employed
+      is: False
+  - note: |
+      ---
+
+      Employer's contact information
+    show if:
+      variable: x.is_self_employed
+      is: False
+  - Street address: x.employer.address.address
+    show if:
+      variable: x.is_self_employed
+      is: False
+  - Unit: x.employer.address.unit
+    required: False
+    show if:
+      variable: x.is_self_employed
+      is: False
+  - City: x.employer.address.city
+    show if:
+      variable: x.is_self_employed
+      is: False
+  - State: x.employer.address.state
+    show if:
+      variable: x.is_self_employed
+      is: False
+  - Zip or postal code: x.employer.address.zip
+    show if:
+      variable: x.is_self_employed
+      is: False
+---
+generic object: ALItemizedJob
+code: |
+  if x.is_self_employed:
+    x.to_add.there_are_any = True
+    x.to_add.new_item_name = "self employed"
+    x.to_add.there_is_another = False
+  elif x.is_part_time:
+    x.to_add.there_are_any = True
+    x.to_add.new_item_name = "part time"
+  else:
+    x.to_add.there_are_any = True
+    x.to_add.new_item_name = "full time"
+  x.wages_added = True
+---
+id: other itemized job income value
+generic object: ALItemizedJob
+question: |
+  Edit your ${ job_items_names.get(i, i) } in your job as a ${ x.source }
+fields:
+  - Amount: x.to_add[i].value
+    datatype: currency
+    hide if:
+      code: x.is_hourly is True
+  - Your hourly pay rate: x.to_add[i].value
+    datatype: currency
+    show if:
+      code: x.is_hourly is True
+        
+  - How often do you get paid this amount?: x.to_add[i].times_per_year
+    input type: radio
+    code: |
+      times_per_year_list
+    datatype: integer
+    hide if:
+      code: x.is_hourly is True
+  - How often do you get paid?: x.to_add[i].times_per_year
+    input type: radio
+    code: |
+      times_per_year_list
+    datatype: integer
+    show if:
+      code: x.is_hourly is True
+  #- Do you have other additional income from this job? (Examples -- Tips, commissions, bonuses): x.to_add.there_is_another
+    #datatype: yesnoradio
+---
+if: j in ["full time","part time"]
+id: itemized job period pt and ft wages
+generic object: ALItemizedJob
+question: |
+  Details about ${ j } compensation for your ${ jobs[i].source } job
+fields:
+  - Paid hourly or salary?: jobs[i].to_add[j].is_hourly
+    input type: radio
+    choices:
+      - Hourly: True
+      - Salary: False
+  - label: |
+      What is your hourly pay for this job?
+    field: jobs[i].to_add[j].value
+    datatype: currency
+    show if: 
+      variable: jobs[i].to_add[j].is_hourly
+      is: True
+  - label: |
+      What do you get for wages during each pay period?
+    field: jobs[i].to_add[j].value
+    datatype: currency
+    show if: 
+      variable: jobs[i].to_add[j].is_hourly
+      is: False
+  - How often  are you paid?: jobs[i].to_add[j].times_per_year
+    input type: radio
+    code: |
+      times_per_year_list
+    datatype: integer
+  - How many hours are worked during that time?: jobs[i].to_add[j].hours_per_period
+    datatype: number
+    show if: 
+      variable: jobs[i].to_add[j].is_hourly
+      is: True
+    validation messages:
+      number: |
+        Enter a number, like 40. If you don't know, enter your best guess.
+  - Could you get insurance through this job (even if your children are not enrolled)?: jobs[i].healthcare_available
+    datatype: yesnoradio
+  - Total Monthly Family Health Insurance Cost to Employee: jobs[i].health_insurance_family_cost
+    datatype: currency
+    show if: jobs[i].healthcare_available
+  - Total Monthly Two Person Cost to Employee: jobs[i].health_insurance_2_person_cost
+    datatype: currency
+    show if: jobs[i].healthcare_available
+  - Total Monthly Cost for Single Person Coverave to Employee: jobs[i].health_insurance_single_person_cost
+    datatype: currency
+    show if: jobs[i].healthcare_available
+  - Are your kids enrolled?: jobs[i].kids_enrolled
+    datatype: yesnoradio
+    show if: jobs[i].healthcare_available
+  - note: |
+      ---
+      
+      Withholding Information
+  - Federal: jobs[i].deductions_federal_monthly_amount
+    datatype: currency
+    required: False
+  - FICA: jobs[i].deductions_fica_monthly_amount
+    datatype: currency
+    required: False
+  - Medicare: jobs[i].deductions_medicare_monthly_amount
+    datatype: currency
+    required: False
+  - State of Vermont: jobs[i].deductions_state_monthly_amount
+    datatype: currency
+    required: False
+  - Other Taxes Withheld/Paid: jobs[i].deductions_other_monthly_amount
+    datatype: currency
+    required: False
+  - Does the employer pay any personal expenses?: jobs[i].pay_personal_expenses
+    datatype: yesnoradio
+  - How much does your employed pay in personal expenses?: jobs[i].to_add['expenses'].value
+    datatype: currency
+    show if: jobs[i].pay_personal_expenses
+  - How often  are you paid this?: jobs[i].to_add['expenses'].times_per_year
+    input type: radio
+    code: |
+      times_per_year_list
+    datatype: integer
+    show if: jobs[i].pay_personal_expenses
+  - Does the job have other incomes, like tips, commissions or bonuses?: jobs[i].to_add.there_is_another
+    datatype: yesnoradio
+---
+if: not jobs[i].pay_personal_expenses
+code: |
+  jobs[i].to_add['expenses'].value = 0
+  jobs[i].to_add['expenses'].times_per_year = 0
+---
+if: j not in ["full time","part time","self employed"]
+id: itemized job period non-pt-or-ft wages
+generic object: ALItemizedJob
+question: |
+  Details about ${ j.lower() } compensation for your ${ jobs[i].source } job
+fields:
+  - label: |
+      Amount
+    field: jobs[i].to_add[j].value
+    datatype: currency
+  - How often  are you paid this?: jobs[i].to_add[j].times_per_year
+    input type: radio
+    code: |
+      times_per_year_list
+    datatype: integer
+  - Does the job have any more incomes like tips, commissions or bonuses?: jobs[i].to_add.there_is_another
+    datatype: yesnoradio
+---
+code: |
+  if j not in ["full time","part time"]:
+    jobs[i].to_add[j].is_hourly = False
+---
+question: Are there more types of non-wage income for your job  as a ${ x.source }?
+subquestion: |
+  You have already mentioned:
+  ${ x.to_add.true_values() }
+fields:
+  - Does the job have other incomes, like tips, commissions or bonuses?: x.to_add.there_is_another
+    datatype: yesnoradio
+---
+id: jobs details about tips commissions bonuses
+generic object: ALItemizedJob
+question: |
+  Other incomes from your job as a ${ x.source }
+subquestion: |
+  You have already told us about your income from **${comma_and_list( [job_items_names.get(key, key).lower() for key in x.to_add.complete_elements().keys()] )}**.
+fields:
+  - What kind of additional income do you get from this job?: x.to_add.new_item_name
+    datatype: radio
+    choices:
+      - Tips
+      - Commissions
+      - Bonuses
+      - Other
+  - Specify: x.to_add.new_item_name
+    show if:
+      variable: x.to_add.new_item_name
+      is: "Other"
+validation code: |
+  if x.to_add.new_item_name in x.to_add.complete_elements().keys():
+    validation_error(f'You already told us about your <strong>{job_items_names.get(x.to_add.new_item_name, x.to_add.new_item_name) }</strong> that pays { currency( x.to_add[ x.to_add.new_item_name ].value )}. Pick a different name.')
+
+---
+id: edit wages and other incomes from a job
+generic object: ALItemizedJob
+continue button field: x.to_add.revisit
+question: |
+  Edit incomes from ${ x.source }
+subquestion: |
+  ${ x.to_add.table }
+
+  ${ x.to_add.add_action() }
+---
+generic object: ALItemizedValueDict
+table: x.to_add.table
+rows: x
+columns:
+  - Type: |
+      str(row_index).replace("_", " ").lower().capitalize()
+  - Amount per hour or other time period: |
+      currency(row_item.value)
+  
+edit:
+  #- exists
+  - is_part_time
+  - is_hourly
+  - times_per_year
+  - value
+---
+generic object: ALItemizedValueDict
+table: x.table
+rows: x
+columns:
+  - Type: |
+      str(row_index).replace("_", " ").lower().capitalize()
+  - Amount: |
+      currency(row_item.value)
+edit:
+  #- exists
+  - is_part_time
+  - is_hourly
+  - times_per_year
+  - value
+---
+reconsider:
+  - employer_jobs
+  - self_employed_jobs
+id: job review
+question: |
+  Review your jobs
+subquestion: |
+  Here is what you've told us about your jobs. You can add more or continue
+  to the next question.
+
+  **Jobs**
+  ${ jobs_table } 
+  
+  ${ jobs.add_action() }  
+  
+  Monthly total for wages: **${ currency(jobs.total(source=["part time", "full time"],times_per_year=12)) }**
+  
+  Monthly total for self-employed work: **${ currency(jobs.total(source=["self employed"],times_per_year=12)) }**
+
+
+
+field: review_jobs
+---
+depends on: jobs
+code: |
+  employer_jobs = jobs.filter(is_self_employed=False)
+---
+depends on: jobs
+code: |
+  self_employed_jobs = jobs.filter(is_self_employed=True)
+---
+table: jobs_table
+rows: jobs
+columns:
+  - Job: |
+      row_item.source
+  - Employer: |
+      row_item.employer.name.first if defined("row_item.employer.name.first") else ""
+  - Monthly gross income: |
+      currency(row_item.gross_total(times_per_year=12)) 
+
+edit:
+  - revisit
+
+confirm: True
+---
+reconsider: employer_jobs
+table: employer_jobs_review_table
+rows: employer_jobs
+columns:
+  - Job: |
+      row_item.source
+edit:
+  - revisit
+
+confirm: True
+---
+reconsider: self_employed_jobs
+table: self_employed_jobs_table
+rows: self_employed_jobs
+columns:
+  - Job: |
+      row_item.source
+  - Monthly gross income: |
+      currency(row_item.gross_total(times_per_year=12)) if len(public_benefits) == 0 else "Not needed"
+
+edit:
+  - value
+
+confirm: True
+---
+reconsider: self_employed_jobs
+table: self_employed_jobs_review_table
+rows: self_employed_jobs
+columns:
+  - Self-employed job: |
+      row_item.source
+
+edit:
+  - value
+
+confirm: True
+---
+only sets: x.revisit
+id: review job
+generic object: ALItemizedJob
+question: Review ${ x.source } job
+fields:
+  - Job: x.source
+  - I am self-employed: x.is_self_employed
+    datatype: yesno
+  - Employer's name: x.employer.name.first
+    show if:
+      variable: x.is_self_employed
+      is: False
+  - note: |
+      ---
+
+      Employer's contact information
+    show if:
+      variable: x.is_self_employed
+      is: False
+  - Street address: x.employer.address.address
+    show if:
+      variable: x.is_self_employed
+      is: False
+  - Unit: x.employer.address.unit
+    required: False
+    show if:
+      variable: x.is_self_employed
+      is: False
+  - City: x.employer.address.city
+    show if:
+      variable: x.is_self_employed
+      is: False
+  - State: x.employer.address.state
+    show if:
+      variable: x.is_self_employed
+      is: False
+  - Zip or postal code: x.employer.address.zip
+    show if:
+      variable: x.is_self_employed
+      is: False
+under: |
+  ${ x.to_add.table }
+
+  ${ x.to_add.add_action() }  
+continue button field: x.revisit
+---
+generic object: ALItemizedValueDict
+table: x.table
+rows: x
+columns:
+  - Type of pay: |
+      str(row_index).replace("_", " ").lower().capitalize()
+  - Notes : |
+      "Hourly rate" if defined("row_item.is_hourly") and row_item.is_hourly == True else ""
+  - Amount: |
+      currency(row_item.value)
+  - How often paid: |
+      times_per_year(times_per_year_list, row_item.times_per_year)
+      
+  
+edit:
+  #- exists
+  - is_part_time
+  - is_hourly
+  - times_per_year
+  - value
+
+---
+############################### INTRO SCREENS ###############################
+---
+id: basic questions intro screen
+decoration: form-lineal
+question: |
+  ${interview_short_title}
+subquestion: |  
+
+  <p>${ intro_vtcourtforms_3_steps }</p>
+  
+  <i class="fas fa-file-text fa-2x"></i> This guided interview will produce a completed Application to Waive Filing Fees and Service Costs for Vermont courts -- form 600-00228. If approved by the Vermont Judiciary, you will not have to pay the court to start a court action.
+  
+    <i class="fas fa-clock fa-2x"></i>  It may take you between 10 and 40 minutes to complete this interview. If you want, you can create an account and save your work to return to later.
+
+  <i class="fas fa-circle-info fa-2x"></i> It is free to use this program. This site is not a lawyer.
+  
+  Visit the [VTLawHelp.org website](https://vtlawhelp.org) for information about civil legal issues.
+
+  <p>${ intro_vtcourtforms_created_by }</p>
+
+fields:
+  - To continue, please accept our [terms of use](https://vtlawhelp.org/vtcourtforms/terms-of-use).: acknowledged_information_use
+    datatype: checkboxes
+    none of the above: False    
+    minlength: 1
+    choices:
+      - I accept the terms of use.
+    validation messages:
+      minlength: |
+        You cannot continue unless you agree to the terms of use.        
+continue button field: al_intro_screen
+---
+id: VT 813 intro
+continue button field: VT_fee_waiver_intro
+question: |
+  Is this interview right for you?
+subquestion: |
+  <h4>Do you need this financial form 813A?</h4>
+
+  INSTRUCTIONS: You are required to complete and file the 813A if-
+  
+  1. You are a party in a newly filed divorce, civil union dissolution, legal separation, annulment or parentage action and you and the other party have minor children; OR
+  
+  2. You or the other party are seeking to modify a previously issued order regarding child support or spousal maintenance (alimony); OR
+  
+  3. You are the person required to pay support, and an enforcement action has been filed against you; OR
+  
+  4. Your child is in the custody of the Department of Children and Families and support has been requested of you; OR
+  
+  5. You are ordered by the Court to complete and file this form or the other party requests that you fill out the form as part of thediscovery process
+  
+  
+  <h4>What you will need to complete this form</h4>
+  
+  For this guided interview, you will need to know:
+  
+  * the name and address of any employer you might have
+  * any public assistance that you get (like 3SquaresVT food help, ReachUp help for families, SSDI, etc.), and
+  * information about the court case for which you want a fee waiver. (You can find this information on other court papers you have about this case. If you are starting a court action -- like filing for divorce -- you won't have a case number or docket number yet.)
+  * your income -- If you work or get unemployment, have those paystubs on hand. If you get child support, have that information on hand. If you are self-employed, have your IRS Schedule C on hand or have your income and business expenses from the last 12 months.
+  * your expenses (like rent, utilities, insurance payments, child care, etc.) -- looking back over the last 12 months
+  * the amount of money you have in the bank and on hand
+  * the value of your vehicle/car, real estate/home, and any other major things you might own, and
+  * if filling out form on behalf of a minor or incompetent adult, you need that person’s information.
+
+---
+id: important_notes_to_user
+question: |
+  Important
+subquestion: |  
+  DEADLINE FOR FILING: This form must be filed with the court before or at your first case manager's conference. If no conference is scheduled it must be filed at least seven (7) days before your first scheduled court hearing.
+continue button field: important_notes_to_user
+---
+############################### ABOUT COURT CASE ###############################
+---
+id: choose a court
+question: |
+  What court is your case in?
+fields:
+  - note: |
+      Choose the county court where you will file this form. 
+      
+      If there's an existing court case, choose the division and county that the case is in. Look at the papers from the court.
+      
+      Not sure what county you are in? [Check this list of cities and towns to find the county.](https://en.m.wikipedia.org/wiki/List_of_municipalities_in_Vermont#Cities)
+
+    
+  - County: user_selected_county
+    code: sorted(all_courts.unique_column_values('branch'))
+---
+id: court case information
+question: |
+  What is the name of the court case you are involved in?
+subquestion: |
+  Example: Kramer vs. Kramer
+fields:
+  - "Case name, as seen on your court papers": case_name
+    maxlength: 80
+  - note: |
+      If you are starting a case, type in your name (the plaintiff's name) "vs." the other party (the defendant's name).
+---
+############################### USERS INFO ###############################
+---
+id: Gather users street address
+sets:
+  - users[0].address.address
+  - users[0].address.city
+  - users[0].address.zip
+  - users[0].address.unit
+  - users[0].address.state
+question: |
+  What is your address?
+  
+fields:
+  - code: |
+      users[0].address_fields(default_state=AL_DEFAULT_STATE)
+  - I have a mailing address that is different from my street address: users1_mailing_address_different
+    datatype: yesno
+  - Mailing address: users[0].mailing_address.address
+    address autocomplete: True
+    show if: users1_mailing_address_different
+  - Unit: users[0].mailing_address.unit
+    required: False
+    show if: users1_mailing_address_different
+  - City: users[0].mailing_address.city
+    show if: users1_mailing_address_different
+  - State: users[0].mailing_address.state
+    code: |
+      states_list()
+    default: VT
+    show if: users1_mailing_address_different
+  - Zip or postal code: users[0].mailing_address.zip
+    required: False
+    show if: users1_mailing_address_different
+
+---
+id: About you
+question: |
+  About you and your household
+subquestion: |
+  How many people live in your household? Include yourself, any spouse, partner, and dependants such as children.
+fields:
+  - "Household size": household_size
+    datatype: integer
+    min: 0
+---
+id: your contact information
+question: |
+  What is your contact information?
+subquestion: |
+  Include **at least one** way to reach you other than by mail.
+
+  If you do not have a phone number or email, use a trusted friend's phone number. But the friend must be someone you can rely on to give you a message.
+
+fields:  
+  - Daytime phone number: users[0].daytime_phone_number
+    datatype: al_international_phone
+    required: False
+  - Email address: users[0].email    
+    datatype: email
+    required: False
+
+validation code: |
+  if (not showifdef('users[0].daytime_phone_number') and \
+      (not showifdef('users[0].email')) and \
+      (not showifdef('users[0].other_contact_method'))):
+    validation_error(word("You need to provide at least one contact method."), field="users[0].other_contact_method")
+---
+continue button field: users.revisit
+question: |
+  Edit info about you
+subquestion: |
+  ${ users.table }
+
+  ${ users.add_action() }
+---
+table: users.table
+rows: users
+columns:
+  - Name: |
+      row_item.name.full() if defined("row_item.name.first") else ""
+  - Address: |
+      row_item.address.block() if defined("row_item.address.address") else ""
+  - Mailing address: |
+      row_item.mailing_address.block() if defined("row_item.mailing_address.address") else ""
+  - Email: |
+      row_item.email if defined("row_item.email") else ""
+  - Phone number: |
+      row_item.daytime_phone_number if defined("row_item.daytime_phone_number") else ""
+  - Signature: |
+      row_item.signature if defined("row_item.signature") else ""
+edit:
+  - name.first
+  - address.address
+  - mailing_address.address
+  - email
+  - daytime_phone_number
+  - signature
+confirm: True
+---
+############################# EXPENSES #############################
+---
+id: expenses intro
+mandatory: True
+continue button field: expenses_intro
+question: |
+  Expenses
+subquestion: |
+  Now we will review your expenses -- the things you pay for.
+  
+  Tap the Next button.
+---
+# "!!omap" makes these terms ordered
+# their order here will be their same order when shown to users.
+variable name: household_expenses.terms_ordered
+data: !!omap
+  - property_tax: "Property taxes"
+  - home_insurance: "Homeowners' or Renter's Insurance"
+  - electric: "Electricity"
+  - phone: "Telephone (Land and Cell Phone)"
+  - water: "Water"
+  - gas: "Gas for home"
+  - fuel: "Oil, Wood or other fuel not listed above"
+  - mowplowtrash: "Mowing, Plowing, Trash"
+  - food: "Groceries"
+  - cableinternet: "Cable/Internet"
+  - laundry: "Laundry/Dry Cleaning"
+  - repairs: "Maintenance/repairs"
+--- 
+code: |
+  household_expenses_other_display = "another household expense"
+
+---
+objects:
+  - household_expenses: ALExpenseList.using(complete_attribute='complete',there_is_another=False)
+---
+objects:
+  - household_expenses_ordered: DAOrderedDict.using(elements=household_expenses.terms_ordered, auto_gather=False, gathered=True)
+---
+#expenses
+id: household expenses types
+question: |
+  What kind of household expenses do you have?
+subquestion: |
+  Be sure to look back over the last 12 months. Maybe you didn't have the expense last month, but you had it earlier in the year.
+fields:
+  - no label: household_expenses.selected_types
+    datatype: checkboxes
+    code: |
+      household_expenses_ordered
+---
+generic object: ALExpense
+code: |
+  x.value
+  x.complete = True
+---
+id: expense information
+reconsider: household_expenses[i].display_name
+question: |
+  Tell us about your ${ household_expenses[i].display_name.lower() }
+subquestion: |
+  **Tip**: You can look back 12 months for this expense. That will give an accurate picture of how much the expense really is.
+fields: 
+  - Type of expense: household_expenses[i].source
+    code: |
+      household_expenses_ordered
+  - Other (explain): household_expenses[i].source_other
+    show if:
+      variable: household_expenses[i].source
+      is: other
+  - Amount: household_expenses[i].value
+    datatype: currency
+  - How often do you pay this amount?: household_expenses[i].times_per_year
+    input type: radio
+    default: 12
+    code: |
+      times_per_year_for_expenses
+  - Does anybody else pay all or part of this expense?: household_expenses[i].paid_by_other
+    datatype: yesnoradio
+
+validation code: |
+  if household_expenses[i].source != "other":
+    household_expenses[i].display_name = household_expenses.terms_ordered.get(household_expenses[i].source, household_expenses[i].source)
+  else:
+    household_expenses[i].display_name = household_expenses[i].source_other
+---
+question:  ${ household_expenses[i].source }
+subquestion: |
+  You said your ${ household_expenses[i].source } expense is ${ household_expenses[i].total(times_per_year=12) }
+fields: 
+  - How much does somebody else pay for that expense per month?: household_expenses[i].paid_by_other_monthly
+    datatype: currency
+---
+code: |
+  household_expenses[i].paid_by_you_monthly = float(household_expenses[i].total(times_per_year=12)) - household_expenses[i].paid_by_other_monthly
+---
+if: household_expenses[i].paid_by_other == False
+code: |
+  household_expenses[i].paid_by_you_monthly = household_expenses[i].total(times_per_year=12)
+  household_expenses[i].paid_by_other_monthly = 0
+---
+code: |
+  if defined('household_expenses[i].source') and household_expenses[i].source != "other":
+    household_expenses[i].display_name = household_expenses.terms_ordered.get(household_expenses[i].source, household_expenses[i].source)
+  elif defined('household_expenses[i].source') and household_expenses[i].source == "other" and defined('expenses[i].source_other'):
+    household_expenses[i].display_name = household_expenses[i].source_other
+  else:
+    household_expenses[i].display_name = household_expenses_other_display
+---
+id: want to add more expenses
+question: Do you want to list any more expenses?
+subquestion: |
+  Tap Next if you don't have more to add.
+  
+  ${ household_expenses_table }
+  
+  ${ household_expenses.add_action() }
+continue button field: household_expenses.review_items
+---
+continue button field: household_expenses.revisit
+question: |
+  Edit expenses
+subquestion: |
+  ${ household_expenses_table }
+
+  ${ household_expenses.add_action() }
+---
+table: household_expenses_table
+rows: household_expenses
+columns:
+  - Type: |
+      row_item.display_name
+  - Amount paid by you: |
+      currency(row_item.paid_by_you_monthly)
+  - Amount paid by somebody else: |
+      currency(row_item.paid_by_other_monthly)
+  - Total: |
+      currency(row_item.total(times_per_year=12))
+edit:
+  - source
+  - value
+---
+# "!!omap" makes these terms ordered
+# their order here will be their same order when shown to users.
+variable name: vehicle_expenses.terms_ordered
+data: !!omap
+  - auto_insur: "Car Insurance"
+  - auto_gas: "Gas"
+  - auto_maint: "Maintenance/Repairs"
+  - auto_reg: "Registration"
+
+--- 
+code: |
+  vehicle_expenses_other_display = "another vehicle expense"
+
+---
+objects:
+  - vehicle_expenses: ALExpenseList.using(complete_attribute='complete',there_is_another=False)
+---
+objects:
+  - vehicle_expenses_ordered: DAOrderedDict.using(elements=expenses.terms_ordered, auto_gather=False, gathered=True)
+---
+#expenses
+id: vehicle expenses types
+question: |
+  What kind of vehicle expenses do you have?
+subquestion: |
+  Be sure to look back over the last 12 months. Maybe you didn't have the expense last month, but you had it earlier in the year.
+fields:
+  - no label: vehicle_expenses.selected_types
+    datatype: checkboxes
+    code: |
+      vehicle_expenses_ordered
+---
+generic object: ALExpense
+code: |
+  x.value
+  x.complete = True
+---
+id: expense information
+reconsider: vehicle_expenses[i].display_name
+question: |
+  Tell us about your ${ vehicle_expenses[i].display_name.lower() }
+subquestion: |
+  **Tip**: You can look back 12 months for this expense. That will give an accurate picture of how much the expense really is.
+fields: 
+  - Type of expense: vehicle_expenses[i].source
+    code: |
+      vehicle_expenses_ordered
+  - Other (explain): vehicle_expenses[i].source_other
+    show if:
+      variable: vehicle_expenses[i].source
+      is: other
+  - Amount: vehicle_expenses[i].value
+    datatype: currency
+  - How often do you pay this amount?: vehicle_expenses[i].times_per_year
+    input type: radio
+    default: 12
+    code: |
+      times_per_year_for_expenses
+  - Does anybody else pay all or part of this expense?: vehicle_expenses[i].paid_by_other
+    datatype: yesnoradio
+
+validation code: |
+  if vehicle_expenses[i].source != "other":
+    vehicle_expenses[i].display_name = vehicle_expenses.terms_ordered.get(vehicle_expenses[i].source, vehicle_expenses[i].source)
+  else:
+    vehicle_expenses[i].display_name = vehicle_expenses[i].source_other
+---
+question:  ${ vehicle_expenses[i].source }
+subquestion: |
+  You said your ${ vehicle_expenses[i].source } expense is ${ vehicle_expenses[i].total(times_per_year=12) }
+fields: 
+  - How much does somebody else pay for that expense per month?: vehicle_expenses[i].paid_by_other_monthly
+    datatype: currency
+---
+code: |
+  vehicle_expenses[i].paid_by_you_monthly = float(vehicle_expenses[i].total(times_per_year=12)) - vehicle_expenses[i].paid_by_other_monthly
+---
+if: vehicle_expenses[i].paid_by_other == False
+code: |
+  vehicle_expenses[i].paid_by_you_monthly = vehicle_expenses[i].total(times_per_year=12)
+  vehicle_expenses[i].paid_by_other_monthly = 0
+---
+code: |
+  if defined('vehicle_expenses[i].source') and vehicle_expenses[i].source != "other":
+    vehicle_expenses[i].display_name = vehicle_expenses.terms_ordered.get(vehicle_expenses[i].source, vehicle_expenses[i].source)
+  elif defined('vehicle_expenses[i].source') and vehicle_expenses[i].source == "other" and defined('expenses[i].source_other'):
+    vehicle_expenses[i].display_name = vehicle_expenses[i].source_other
+  else:
+    vehicle_expenses[i].display_name = vehicle_expenses_other_display
+---
+id: want to add more expenses
+question: Do you want to list any more expenses?
+subquestion: |
+  Tap Next if you don't have more to add.
+  
+  ${ vehicle_expenses_table }
+  
+  ${ vehicle_expenses.add_action() }
+continue button field: vehicle_expenses.review_items
+---
+continue button field: vehicle_expenses.revisit
+question: |
+  Edit expenses
+subquestion: |
+  ${ vehicle_expenses_table }
+
+  ${ vehicle_expenses.add_action() }
+---
+table: vehicle_expenses_table
+rows: vehicle_expenses
+columns:
+  - Type: |
+      row_item.display_name
+  - Amount paid by you: |
+      currency(row_item.paid_by_you_monthly)
+  - Amount paid by somebody else: |
+      currency(row_item.paid_by_other_monthly)
+  - Total: |
+      currency(row_item.total(times_per_year=12))
+edit:
+  - source
+  - value
+
+--- 
+code: |
+  vehicle_expenses_other_display = "another vehicle expense"
+
+---
+objects:
+  - vehicle_expenses: ALExpenseList.using(complete_attribute='complete',there_is_another=False)
+---
+objects:
+  - vehicle_expenses_ordered: DAOrderedDict.using(elements=vehicle_expenses.terms_ordered, auto_gather=False, gathered=True)
+---
+#expenses
+id: vehicle expenses types
+question: |
+  What kind of vehicle expenses do you have?
+subquestion: |
+  Be sure to look back over the last 12 months. Maybe you didn't have the expense last month, but you had it earlier in the year.
+fields:
+  - no label: vehicle_expenses.selected_types
+    datatype: checkboxes
+    code: |
+      vehicle_expenses_ordered
+---
+generic object: ALExpense
+code: |
+  x.value
+  x.complete = True
+---
+id: expense information
+reconsider: vehicle_expenses[i].display_name
+question: |
+  Tell us about your ${ vehicle_expenses[i].display_name.lower() }
+subquestion: |
+  **Tip**: You can look back 12 months for this expense. That will give an accurate picture of how much the expense really is.
+fields: 
+  - Type of expense: vehicle_expenses[i].source
+    code: |
+      vehicle_expenses_ordered
+  - Other (explain): vehicle_expenses[i].source_other
+    show if:
+      variable: vehicle_expenses[i].source
+      is: other
+  - Amount: vehicle_expenses[i].value
+    datatype: currency
+  - How often do you pay this amount?: vehicle_expenses[i].times_per_year
+    input type: radio
+    default: 12
+    code: |
+      times_per_year_for_expenses
+  - Does anybody else pay all or part of this expense?: vehicle_expenses[i].paid_by_other
+    datatype: yesnoradio
+
+validation code: |
+  if vehicle_expenses[i].source != "other":
+    vehicle_expenses[i].display_name = vehicle_expenses.terms_ordered.get(vehicle_expenses[i].source, vehicle_expenses[i].source)
+  else:
+    vehicle_expenses[i].display_name = vehicle_expenses[i].source_other
+---
+question:  ${ vehicle_expenses[i].source }
+subquestion: |
+  You said your ${ vehicle_expenses[i].source } expense is ${ vehicle_expenses[i].total(times_per_year=12) }
+fields: 
+  - How much does somebody else pay for that expense per month?: vehicle_expenses[i].paid_by_other_monthly
+    datatype: currency
+---
+code: |
+  vehicle_expenses[i].paid_by_you_monthly = float(vehicle_expenses[i].total(times_per_year=12)) - vehicle_expenses[i].paid_by_other_monthly
+---
+if: vehicle_expenses[i].paid_by_other == False
+code: |
+  vehicle_expenses[i].paid_by_you_monthly = vehicle_expenses[i].total(times_per_year=12)
+  vehicle_expenses[i].paid_by_other_monthly = 0
+---
+code: |
+  if defined('vehicle_expenses[i].source') and vehicle_expenses[i].source != "other":
+    vehicle_expenses[i].display_name = vehicle_expenses.terms_ordered.get(vehicle_expenses[i].source, vehicle_expenses[i].source)
+  elif defined('vehicle_expenses[i].source') and vehicle_expenses[i].source == "other" and defined('expenses[i].source_other'):
+    vehicle_expenses[i].display_name = vehicle_expenses[i].source_other
+  else:
+    vehicle_expenses[i].display_name = vehicle_expenses_other_display
+---
+id: want to add more expenses
+question: Do you want to list any more expenses?
+subquestion: |
+  Tap Next if you don't have more to add.
+  
+  ${ vehicle_expenses_table }
+  
+  ${ vehicle_expenses.add_action() }
+continue button field: vehicle_expenses.review_items
+---
+continue button field: vehicle_expenses.revisit
+question: |
+  Edit expenses
+subquestion: |
+  ${ vehicle_expenses_table }
+
+  ${ vehicle_expenses.add_action() }
+---
+table: vehicle_expenses_table
+rows: vehicle_expenses
+columns:
+  - Type: |
+      row_item.display_name
+  - Amount paid by you: |
+      currency(row_item.paid_by_you_monthly)
+  - Amount paid by somebody else: |
+      currency(row_item.paid_by_other_monthly)
+  - Total: |
+      currency(row_item.total(times_per_year=12))
+edit:
+  - source
+  - value
+---
+# "!!omap" makes these terms ordered
+# their order here will be their same order when shown to users.
+variable name: insurance_expenses.terms_ordered
+data: !!omap
+  - insur_life: "Life Insurance"
+  - insur_disab: "Disability Insurance"
+  - insur_health: "Health Insurance"
+  - insur_dentvis: "Dental/Vision"
+--- 
+code: |
+  insurance_expenses_other_display = "another insurance expense"
+
+---
+objects:
+  - insurance_expenses: ALExpenseList.using(complete_attribute='complete',there_is_another=False)
+---
+objects:
+  - insurance_expenses_ordered: DAOrderedDict.using(elements=insurance_expenses.terms_ordered, auto_gather=False, gathered=True)
+---
+#expenses
+id: insurance expenses types
+question: |
+  What kind of insurance expenses do you have?
+subquestion: |
+  Be sure to look back over the last 12 months. Maybe you didn't have the expense last month, but you had it earlier in the year.
+fields:
+  - no label: insurance_expenses.selected_types
+    datatype: checkboxes
+    code: |
+      insurance_expenses_ordered
+---
+generic object: ALExpense
+code: |
+  x.value
+  x.complete = True
+---
+id: expense information
+reconsider: insurance_expenses[i].display_name
+question: |
+  Tell us about your ${ insurance_expenses[i].display_name.lower() }
+subquestion: |
+  **Tip**: You can look back 12 months for this expense. That will give an accurate picture of how much the expense really is.
+fields: 
+  - Type of expense: insurance_expenses[i].source
+    code: |
+      insurance_expenses_ordered
+  - Other (explain): insurance_expenses[i].source_other
+    show if:
+      variable: insurance_expenses[i].source
+      is: other
+  - Amount: insurance_expenses[i].value
+    datatype: currency
+  - How often do you pay this amount?: insurance_expenses[i].times_per_year
+    input type: radio
+    default: 12
+    code: |
+      times_per_year_for_expenses
+  - Does anybody else pay all or part of this expense?: insurance_expenses[i].paid_by_other
+    datatype: yesnoradio
+
+validation code: |
+  if insurance_expenses[i].source != "other":
+    insurance_expenses[i].display_name = insurance_expenses.terms_ordered.get(insurance_expenses[i].source, insurance_expenses[i].source)
+  else:
+    insurance_expenses[i].display_name = insurance_expenses[i].source_other
+---
+question:  ${ insurance_expenses[i].source }
+subquestion: |
+  You said your ${ insurance_expenses[i].source } expense is ${ insurance_expenses[i].total(times_per_year=12) }
+fields: 
+  - How much does somebody else pay for that expense per month?: insurance_expenses[i].paid_by_other_monthly
+    datatype: currency
+---
+code: |
+  insurance_expenses[i].paid_by_you_monthly = float(insurance_expenses[i].total(times_per_year=12)) - insurance_expenses[i].paid_by_other_monthly
+---
+if: insurance_expenses[i].paid_by_other == False
+code: |
+  insurance_expenses[i].paid_by_you_monthly = insurance_expenses[i].total(times_per_year=12)
+  insurance_expenses[i].paid_by_other_monthly = 0
+---
+code: |
+  if defined('insurance_expenses[i].source') and insurance_expenses[i].source != "other":
+    insurance_expenses[i].display_name = insurance_expenses.terms_ordered.get(insurance_expenses[i].source, insurance_expenses[i].source)
+  elif defined('insurance_expenses[i].source') and insurance_expenses[i].source == "other" and defined('expenses[i].source_other'):
+    insurance_expenses[i].display_name = insurance_expenses[i].source_other
+  else:
+    insurance_expenses[i].display_name = insurance_expenses_other_display
+---
+id: want to add more expenses
+question: Do you want to list any more expenses?
+subquestion: |
+  Tap Next if you don't have more to add.
+  
+  ${ insurance_expenses_table }
+  
+  ${ insurance_expenses.add_action() }
+continue button field: insurance_expenses.review_items
+---
+continue button field: insurance_expenses.revisit
+question: |
+  Edit expenses
+subquestion: |
+  ${ insurance_expenses_table }
+
+  ${ insurance_expenses.add_action() }
+---
+table: insurance_expenses_table
+rows: insurance_expenses
+columns:
+  - Type: |
+      row_item.display_name
+  - Amount paid by you: |
+      currency(row_item.paid_by_you_monthly)
+  - Amount paid by somebody else: |
+      currency(row_item.paid_by_other_monthly)
+  - Total: |
+      currency(row_item.total(times_per_year=12))
+edit:
+  - source
+  - value
+---
+# "!!omap" makes these terms ordered
+# their order here will be their same order when shown to users.
+variable name: personal_expenses.terms_ordered
+data: !!omap
+  - medical: "Uninsured Medical Expenses"
+  - clothes: "Clothing/Shoes"
+  - toiletries: "Toiletries/Cosmetics"
+  - dining: "Meals/Snacks eaten out"
+  - hair: "Hair Care"
+  - reading: "Magazines, Newspapers, Books, other reading material"
+  - tobalch: "Tobacco and Alcohol Products"
+  - pets: "Veterinarian and other pet expenses"
+  - entertain: "Entertainment (movies, bowling, museums, etc.)"
+  - gifts: "Gifts for others"
+  - charity: "Charitable Contributions"
+  - vacation: "Vacation"
+  - dues: "Union Dues"
+  - save: "Monthly Contribution to Savings"
+  - contributions: "Monthly Contribution to Retirement Funds (401K, IRA, etc.)"
+  - other_kids: "Expenses for Children living with you but not of this relationship"
+  - child_support: "Court Ordered Child Support you pay for children of another relationship."
+  - alimony: "Court Ordered Spousal Maintenance (Alimony) you pay"
+  - other: "Miscellaneous"
+--- 
+code: |
+  personal_expenses_other_display = "another personal expense"
+
+---
+objects:
+  - personal_expenses: ALExpenseList.using(complete_attribute='complete',there_is_another=False)
+---
+objects:
+  - personal_expenses_ordered: DAOrderedDict.using(elements=personal_expenses.terms_ordered, auto_gather=False, gathered=True)
+---
+#expenses
+id: personal expenses types
+question: |
+  What kind of personal expenses do you have?
+subquestion: |
+  Be sure to look back over the last 12 months. Maybe you didn't have the expense last month, but you had it earlier in the year.
+fields:
+  - no label: personal_expenses.selected_types
+    datatype: checkboxes
+    code: |
+      personal_expenses_ordered
+---
+generic object: ALExpense
+code: |
+  x.value
+  x.complete = True
+---
+id: expense information
+reconsider: personal_expenses[i].display_name
+question: |
+  Tell us about your ${ personal_expenses[i].display_name.lower() }
+subquestion: |
+  **Tip**: You can look back 12 months for this expense. That will give an accurate picture of how much the expense really is.
+fields: 
+  - Type of expense: personal_expenses[i].source
+    code: |
+      personal_expenses_ordered
+  - Other (explain): personal_expenses[i].source_other
+    show if:
+      variable: personal_expenses[i].source
+      is: other
+  - Amount: personal_expenses[i].value
+    datatype: currency
+  - How often do you pay this amount?: personal_expenses[i].times_per_year
+    input type: radio
+    default: 12
+    code: |
+      times_per_year_for_expenses
+  - Does anybody else pay all or part of this expense?: personal_expenses[i].paid_by_other
+    datatype: yesnoradio
+
+validation code: |
+  if personal_expenses[i].source != "other":
+    personal_expenses[i].display_name = personal_expenses.terms_ordered.get(personal_expenses[i].source, personal_expenses[i].source)
+  else:
+    personal_expenses[i].display_name = personal_expenses[i].source_other
+---
+question:  ${ personal_expenses[i].source }
+subquestion: |
+  You said your ${ personal_expenses[i].source } expense is ${ personal_expenses[i].total(times_per_year=12) }
+fields: 
+  - How much does somebody else pay for that expense per month?: personal_expenses[i].paid_by_other_monthly
+    datatype: currency
+---
+code: |
+  personal_expenses[i].paid_by_you_monthly = float(personal_expenses[i].total(times_per_year=12)) - personal_expenses[i].paid_by_other_monthly
+---
+if: personal_expenses[i].paid_by_other == False
+code: |
+  personal_expenses[i].paid_by_you_monthly = personal_expenses[i].total(times_per_year=12)
+  personal_expenses[i].paid_by_other_monthly = 0
+---
+code: |
+  if defined('personal_expenses[i].source') and personal_expenses[i].source != "other":
+    personal_expenses[i].display_name = personal_expenses.terms_ordered.get(personal_expenses[i].source, personal_expenses[i].source)
+  elif defined('personal_expenses[i].source') and personal_expenses[i].source == "other" and defined('expenses[i].source_other'):
+    personal_expenses[i].display_name = personal_expenses[i].source_other
+  else:
+    personal_expenses[i].display_name = personal_expenses_other_display
+---
+id: want to add more expenses
+question: Do you want to list any more expenses?
+subquestion: |
+  Tap Next if you don't have more to add.
+  
+  ${ personal_expenses_table }
+  
+  ${ personal_expenses.add_action() }
+continue button field: personal_expenses.review_items
+---
+continue button field: personal_expenses.revisit
+question: |
+  Edit expenses
+subquestion: |
+  ${ personal_expenses_table }
+
+  ${ personal_expenses.add_action() }
+---
+table: personal_expenses_table
+rows: personal_expenses
+columns:
+  - Type: |
+      row_item.display_name
+  - Amount paid by you: |
+      currency(row_item.paid_by_you_monthly)
+  - Amount paid by somebody else: |
+      currency(row_item.paid_by_other_monthly)
+  - Total: |
+      currency(row_item.total(times_per_year=12))
+edit:
+  - source
+  - value
+---
+# "!!omap" makes these terms ordered
+# their order here will be their same order when shown to users.
+variable name: children_expenses.terms_ordered
+data: !!omap
+  - kids_clothes: "Clothing and Shoes"
+  - kids_diapers: "Diapers"
+  - kids_lunch: "School lunches"
+  - kids_supplies: "School supplies"
+  - kids_activities: "Fees/expenses for special activities (e.g., piano lessons, sports)"
+  - kids_camp: "Summer Camp"
+  - kids_tuition: "Private School Tuition"
+  - kids_medical: "Uninsured Medical/Dental Expenses"
+  - kids_childsupport: "Child Support you pay for your children of this relationship"
+  - kids_other: "Miscellaneous"
+
+--- 
+code: |
+  children_expenses_other_display = "another children expense"
+
+---
+objects:
+  - children_expenses: ALExpenseList.using(complete_attribute='complete',there_is_another=False)
+---
+objects:
+  - children_expenses_ordered: DAOrderedDict.using(elements=children_expenses.terms_ordered, auto_gather=False, gathered=True)
+---
+#expenses
+id: children expenses types
+question: |
+  What kind of children expenses do you have?
+subquestion: |
+  Be sure to look back over the last 12 months. Maybe you didn't have the expense last month, but you had it earlier in the year.
+fields:
+  - no label: children_expenses.selected_types
+    datatype: checkboxes
+    code: |
+      children_expenses_ordered
+---
+generic object: ALExpense
+code: |
+  x.value
+  x.complete = True
+---
+id: expense information
+reconsider: children_expenses[i].display_name
+question: |
+  Tell us about your ${ children_expenses[i].display_name.lower() }
+subquestion: |
+  **Tip**: You can look back 12 months for this expense. That will give an accurate picture of how much the expense really is.
+fields: 
+  - Type of expense: children_expenses[i].source
+    code: |
+      children_expenses_ordered
+  - Other (explain): children_expenses[i].source_other
+    show if:
+      variable: children_expenses[i].source
+      is: other
+  - Amount: children_expenses[i].value
+    datatype: currency
+  - How often do you pay this amount?: children_expenses[i].times_per_year
+    input type: radio
+    default: 12
+    code: |
+      times_per_year_for_expenses
+  - Does anybody else pay all or part of this expense?: children_expenses[i].paid_by_other
+    datatype: yesnoradio
+
+validation code: |
+  if children_expenses[i].source != "other":
+    children_expenses[i].display_name = children_expenses.terms_ordered.get(children_expenses[i].source, children_expenses[i].source)
+  else:
+    children_expenses[i].display_name = children_expenses[i].source_other
+---
+question:  ${ children_expenses[i].source }
+subquestion: |
+  You said your ${ children_expenses[i].source } expense is ${ children_expenses[i].total(times_per_year=12) }
+fields: 
+  - How much does somebody else pay for that expense per month?: children_expenses[i].paid_by_other_monthly
+    datatype: currency
+---
+code: |
+  children_expenses[i].paid_by_you_monthly = float(children_expenses[i].total(times_per_year=12)) - children_expenses[i].paid_by_other_monthly
+---
+if: children_expenses[i].paid_by_other == False
+code: |
+  children_expenses[i].paid_by_you_monthly = children_expenses[i].total(times_per_year=12)
+  children_expenses[i].paid_by_other_monthly = 0
+---
+code: |
+  if defined('children_expenses[i].source') and children_expenses[i].source != "other":
+    children_expenses[i].display_name = children_expenses.terms_ordered.get(children_expenses[i].source, children_expenses[i].source)
+  elif defined('children_expenses[i].source') and children_expenses[i].source == "other" and defined('expenses[i].source_other'):
+    children_expenses[i].display_name = children_expenses[i].source_other
+  else:
+    children_expenses[i].display_name = children_expenses_other_display
+---
+id: want to add more expenses
+question: Do you want to list any more expenses?
+subquestion: |
+  Tap Next if you don't have more to add.
+  
+  ${ children_expenses_table }
+  
+  ${ children_expenses.add_action() }
+continue button field: children_expenses.review_items
+---
+continue button field: children_expenses.revisit
+question: |
+  Edit expenses
+subquestion: |
+  ${ children_expenses_table }
+
+  ${ children_expenses.add_action() }
+---
+table: children_expenses_table
+rows: children_expenses
+columns:
+  - Type: |
+      row_item.display_name
+  - Amount paid by you: |
+      currency(row_item.paid_by_you_monthly)
+  - Amount paid by somebody else: |
+      currency(row_item.paid_by_other_monthly)
+  - Total: |
+      currency(row_item.total(times_per_year=12))
+edit:
+  - source
+  - value
+---
+
+variable name: primary_residence_loans.terms_ordered
+data: !!omap
+  - primary: "Primary Residence"
+  - second: "Second Mortgage"
+  - home_equity: "Home Equity"
+---
+comment: |
+  used in this display line
+  About your ___
+code: |
+  primary_residence_loans_other_display = "other primary_residence_loan"
+---
+objects:
+  - primary_residence_loans: ALAssetList.using(complete_attribute='complete',there_is_another=False)
+---
+objects:
+  - primary_residence_loans_ordered: DAOrderedDict.using(elements=primary_residence_loans.terms_ordered, auto_gather=False, gathered=True)
+---
+id: primary_residence_loans there are any
+generic object: ALAssetList
+code: |
+  if x.selected_types.any_true():
+    x.move_checks_to_list(selected_terms=x.terms_ordered)
+    x.there_are_any = True
+  else:
+    x.there_are_any = False
+---
+id: are there vehicles
+#vehicles
+question: |
+  Do you have any loans on your primary residence?
+subquestion: |
+   Check any that apply to you.
+fields:
+  - no label: primary_residence_loans.selected_types
+    datatype: checkboxes
+    code: |
+      primary_residence_loans_ordered
+---
+id: primary_residence_loans complete
+code: |
+  primary_residence_loans[i].balance
+  primary_residence_loans[i].complete = True
+---
+id: primary_residence_loans complete
+generic object: ALAssetList
+code: |
+  x[i].market_value
+  x[i].complete = True
+---
+id: info for each primary_residence_loans
+reconsider: primary_residence_loans[i].display_name
+question: |
+  About your ${ primary_residence_loans[i].display_name.lower() }
+subquestion: |
+  Make your best guess when answering these questions.
+fields:
+  - Type of Loan: primary_residence_loans[i].source
+    code: |
+      primary_residence_loans_ordered
+  - Lender: primary_residence_loans[i].lender
+  - Balance owed: primary_residence_loans[i].balance
+    datatype: currency
+  - Monthly payment: primary_residence_loans[i].monthly_payment
+    datatype: currency
+  - Are YOU making this payment?: primary_residence_loans[i].self_payment
+    datatype: yesnoradio
+---
+code: |
+  if defined('primary_residence_loans[i].source') and primary_residence_loans[i].source != "other":
+    primary_residence_loans[i].display_name = primary_residence_loans.terms_ordered.get(primary_residence_loans[i].source, primary_residence_loans[i].source)
+  elif defined('primary_residence_loans[i].source') and primary_residence_loans[i].source == "other" and defined('primary_residence_loans[i].source_other'):
+    primary_residence_loans[i].display_name = primary_residence_loans[i].source_other
+  else:
+    primary_residence_loans[i].display_name = primary_residence_loans_other_display
+---
+id: want to add more primary_residence_loans
+question: Do you want to list any more primary_residence_loans?
+subquestion: |
+  Tap Next if you don't have more to add.
+  
+  ${ primary_residence_loans_table }
+  
+  ${ primary_residence_loans.add_action() }
+continue button field: primary_residence_loans.review_items
+---
+continue button field: primary_residence_loans.revisit
+question: |
+  Edit primary_residence_loans
+subquestion: |
+  ${ primary_residence_loans_table }
+
+  ${ primary_residence_loans.add_action() }
+---
+table: primary_residence_loans_table
+rows: primary_residence_loans
+columns:
+  - Type of Loan: |
+      row_item.source
+  - Lender: |
+      row_item.lender
+  - Balance owed: |
+      currency(row_item.balance) if defined("row_item.balance") else ""
+  - Monthly Payment: |
+      currency(row_item.monthly_payment) if defined("row_item.monthly_payment") else ""
+  - Check here if YOU are making this payment: |
+      row_item.self_payment
+edit:
+  - source
+  - lender
+  - monthly_payment
+  - self_payment
+  - balance
+---
+variable name: other_loans.terms_ordered
+data: !!omap
+  - personal: "Personal Loan"
+  - school: "School/College Loan"
+  - other: "Other"
+---
+comment: |
+  used in this display line
+  About your ___
+code: |
+  other_loans_other_display = "other loan"
+---
+objects:
+  - other_loans: ALAssetList.using(complete_attribute='complete',there_is_another=False)
+---
+objects:
+  - other_loans_ordered: DAOrderedDict.using(elements=other_loans.terms_ordered, auto_gather=False, gathered=True)
+---
+id: other_loans there are any
+generic object: ALAssetList
+code: |
+  if x.selected_types.any_true():
+    x.move_checks_to_list(selected_terms=x.terms_ordered)
+    x.there_are_any = True
+  else:
+    x.there_are_any = False
+---
+id: are there other loands
+#vehicles
+question: |
+  Do you have any other loans?
+subquestion: |
+   Check any that apply to you.
+fields:
+  - no label: other_loans.selected_types
+    datatype: checkboxes
+    code: |
+      other_loans_ordered
+---
+id: primary_residence_loans complete
+generic object: ALAssetList
+code: |
+  other_loans[i].lender
+  other_loans[i].complete = True
+---
+id: info for each other_loans
+reconsider: other_loans[i].display_name
+question: |
+  About your ${ other_loans[i].display_name.lower() }
+subquestion: |
+  Make your best guess when answering these questions.
+fields:
+  - Type of Loan: other_loans[i].source
+    code: |
+      other_loans_ordered
+  - Lender: other_loans[i].lender
+  - Balance owed: other_loans[i].balance
+    datatype: currency
+  - Monthly payment: other_loans[i].monthly_payment
+    datatype: currency
+  - Are YOU making this payment?: other_loans[i].self_payment
+    datatype: yesnoradio
+---
+code: |
+  if defined('other_loans[i].source') and other_loans[i].source != "other":
+    other_loans[i].display_name = other_loans.terms_ordered.get(other_loans[i].source, other_loans[i].source)
+  elif defined('other_loans[i].source') and other_loans[i].source == "other" and defined('other_loans[i].source_other'):
+    other_loans[i].display_name = other_loans[i].source_other
+  else:
+    other_loans[i].display_name = other_loans_other_display
+---
+id: want to add more other_loans
+question: Do you want to list any other loans?
+subquestion: |
+  Tap Next if you don't have more to add.
+  
+  ${ other_loans_table }
+  
+  ${ other_loans.add_action() }
+continue button field: other_loans.review_items
+---
+continue button field: other_loans.revisit
+question: |
+  Edit other_loans
+subquestion: |
+  ${ other_loans_table }
+
+  ${ other_loans.add_action() }
+---
+table: other_loans_table
+rows: other_loans
+columns:
+  - Type of Loan: |
+      row_item.source
+  - Lender: |
+      row_item.lender
+  - Balance owed: |
+      currency(row_item.balance) if defined("row_item.balance") else ""
+  - Monthly Payment: |
+      currency(row_item.monthly_payment) if defined("row_item.monthly_payment") else ""
+  - Check here if YOU are making this payment: |
+      row_item.self_payment
+edit:
+  - source
+  - lender
+  - monthly_payment
+  - self_payment
+  - balance
+---
+objects:
+  - real_estate_loans: ALAssetList.using(complete_attribute='complete',there_is_another=False)
+---
+question: Other Real Estate Loans
+subquestion: |
+  DO NOT include business or rental property loans.
+fields:
+  - Do you have other real estate loans?: real_estate_loans.there_are_any
+    datatype: yesnoradio
+---
+id: real_estate_loans complete
+code: |
+  real_estate_loans[i].lender
+  real_estate_loans[i].complete = True
+---
+id: info for each real estate loans
+question: |
+  About your ${ ordinal(i) } real estate loan
+subquestion: |
+  Make your best guess when answering these questions.
+fields:
+  - Property Description: real_estate_loans[i].source
+  - Lender: real_estate_loans[i].lender
+  - Balance owed: real_estate_loans[i].balance
+    datatype: currency
+  - Monthly payment: real_estate_loans[i].monthly_payment
+    datatype: currency
+  - Are YOU making this payment?: real_estate_loans[i].self_payment
+    datatype: yesnoradio
+---
+id: want to add more real_estate_loans
+question: Do you want to list any more real estate loans?
+subquestion: |
+  Tap Next if you don't have more to add.
+  
+  ${ real_estate_loans_table }
+  
+  ${ real_estate_loans.add_action() }
+continue button field: real_estate_loans.review_items
+---
+continue button field: other_loans.revisit
+question: |
+  Edit other_loans
+subquestion: |
+  ${ real_estate_loans_table }
+
+  ${ real_estate_loans.add_action() }
+---
+table: real_estate_loans_table
+rows: real_estate_loans
+columns:
+  - Property Description: |
+      row_item.source
+  - Lender: |
+      row_item.lender
+  - Balance owed: |
+      currency(row_item.balance) if defined("row_item.balance") else ""
+  - Monthly Payment: |
+      currency(row_item.monthly_payment) if defined("row_item.monthly_payment") else ""
+  - Check here if YOU are making this payment: |
+      row_item.self_payment
+edit:
+  - source
+  - lender
+  - monthly_payment
+  - self_payment
+  - balance
+---
+objects:
+  - vehicle_loans: ALAssetList.using(complete_attribute='complete',there_is_another=False)
+---
+question: Vehicle Loans
+fields:
+  - Do you have other vehicle loans?: vehicle_loans.there_are_any
+    datatype: yesnoradio
+---
+id: vehicle_loans complete
+code: |
+  vehicle_loans[i].lender
+  vehicle_loans[i].complete = True
+---
+id: info for each vehicle loans
+question: |
+  About your ${ ordinal(i) } vehicle loan
+subquestion: |
+  Make your best guess when answering these questions.
+fields:
+  - Type of Vehicle (Year, Make, Model): vehicle_loans[i].source
+  - Lender: vehicle_loans[i].lender
+  - Balance owed: vehicle_loans[i].balance
+    datatype: currency
+  - Monthly payment: vehicle_loans[i].monthly_payment
+    datatype: currency
+  - Are YOU making this payment?: vehicle_loans[i].self_payment
+    datatype: yesnoradio
+---
+continue button field: vehicle_loans.revisit
+question: |
+  Edit vehicle_loans
+subquestion: |
+  ${ vehicle_loans_table }
+
+  ${ vehicle_loans.add_action() }
+---
+table: vehicle_loans_table
+rows: vehicle_loans
+columns:
+  - Year, Make, Model: |
+      row_item.source
+  - Lender: |
+      row_item.lender
+  - Balance owed: |
+      currency(row_item.balance) if defined("row_item.balance") else ""
+  - Monthly Payment: |
+      currency(row_item.monthly_payment) if defined("row_item.monthly_payment") else ""
+  - Check here if YOU are making this payment: |
+      row_item.self_payment
+edit:
+  - source
+  - lender
+  - monthly_payment
+  - self_payment
+  - balance
+---
+---
+objects:
+  - credit_card_debt: ALAssetList.using(complete_attribute='complete',there_is_another=False)
+---
+question: Credit Card Debt
+fields:
+  - Do you have any credit card debt?: credit_card_debt.there_are_any
+    datatype: yesnoradio
+---
+id: credit_card_debt complete
+code: |
+  credit_card_debt[i].lender
+  credit_card_debt[i].complete = True
+---
+id: info for each credit_card_debt loans
+question: |
+  About your ${ ordinal(i) } credit_card_debt
+subquestion: |
+  Make your best guess when answering these questions.
+fields:
+  - Card Holder: credit_card_debt[i].source
+  - Company: credit_card_debt[i].lender
+  - Balance owed: credit_card_debt[i].balance
+    datatype: currency
+  - Monthly payment: credit_card_debt[i].monthly_payment
+    datatype: currency
+  - Are YOU making this payment?: credit_card_debt[i].self_payment
+    datatype: yesnoradio
+---
+id: want to add more credit_card_debt
+question: Do you want to list any more credit card debt?
+subquestion:  
+  Tap Next if you don't have more to add.
+  
+  ${ credit_card_debt_table }
+  
+  ${ credit_card_debt.add_action() }
+continue button field: credit_card_debt.review_items
+---
+continue button field: credit_card_debt.revisit
+question: |
+  Edit credit_card_debt
+subquestion: |
+  ${ credit_card_debt_table }
+
+  ${ credit_card_debt.add_action() }
+---
+table: credit_card_debt_table
+rows: credit_card_debt
+columns:
+  - Card Holder: |
+      row_item.source
+  - Company: |
+      row_item.lender
+  - Balance owed: |
+      currency(row_item.balance) if defined("row_item.balance") else ""
+  - Monthly Payment: |
+      currency(row_item.monthly_payment) if defined("row_item.monthly_payment") else ""
+  - Check here if YOU are making this payment: |
+      row_item.self_payment
+edit:
+  - source
+  - lender
+  - monthly_payment
+  - self_payment
+  - balance
+---
+objects:
+  - other_debt: ALAssetList.using(complete_attribute='complete',there_is_another=False)
+---
+question: other Debt
+fields:
+  - Do you have any other debt?: other_debt.there_are_any
+    datatype: yesnoradio
+---
+id: other_debt complete
+code: |
+  other_debt[i].lender
+  other_debt[i].complete = True
+---
+id: info for each other_debt loans
+question: |
+  About your ${ ordinal(i) } other debt
+subquestion: |
+  Make your best guess when answering these questions.
+fields:
+  - Type of Debt: other_debt[i].source
+  - Company/Entity Owwed: other_debt[i].lender
+  - Balance owed: other_debt[i].balance
+    datatype: currency
+  - Monthly payment: other_debt[i].monthly_payment
+    datatype: currency
+  - Are YOU making this payment?: other_debt[i].self_payment
+    datatype: yesnoradio
+---
+id: want to add more other debt
+question: Do you want to list any other debt?
+subquestion:  
+  Tap Next if you don't have more to add.
+  
+  ${ other_debt_table }
+  
+  ${ other_debt.add_action() }
+continue button field: other_debt.review_items
+---
+continue button field: other_debt.revisit
+question: |
+  Edit other_debt
+subquestion: |
+  ${ other_debt_table }
+
+  ${ other_debt.add_action() }
+---
+table: other_debt_table
+rows: other_debt
+columns:
+  - Type of Debt: |
+      row_item.source
+  - Company/Entity Owed: |
+      row_item.lender
+  - Balance owed: |
+      currency(row_item.balance) if defined("row_item.balance") else ""
+  - Monthly Payment: |
+      currency(row_item.monthly_payment) if defined("row_item.monthly_payment") else ""
+  - Check here if YOU are making this payment: |
+      row_item.self_payment
+edit:
+  - source
+  - lender
+  - monthly_payment
+  - self_payment
+  - balance
+---
+
+#############################OTHER REASONS#############################
+---
+id: more information
+question: |
+  More information
+subquestion: |
+  Tell us about other reasons why you cannot afford the court fees (optional question).
+fields:
+  - "Reason(s):": other_reasons_why_cannot_afford
+    input type: area
+    maxlength: 1000
+    required: False
+  - note: |
+      **We’re ready to generate your draft form so you can review it!** It will take a moment after you tap the Next button.
+
+#${ after_last_question_we_will_generate_your_forms }
+---
+############################# SIGNATURE #############################
+---
+id: User signature
+question: |
+  User signature
+continue button field: User_signature
+---
+id: signature choice
+decoration: file-signature
+question: |
+  Your documents are almost ready
+subquestion: |
+  How do you want to sign them?
+fields: 
+  - I will sign: signature_choice
+    input type: radio
+    choices:
+      - On my computer or phone: this_device
+    show if:
+      code: |
+        al_form_requires_digital_signature
+  - I will sign: signature_choice
+    input type: radio
+    choices:
+      - On my computer or phone: this_device
+      - On the paper with a pen after I print the documents: sign_after_printing
+    show if:
+      code: |
+        not al_form_requires_digital_signature
+continue button field: saw_signature_choice    
+---
+
+##################### PREVIEW SCREEN #######################
+---
+id: preview VT_fee_waiver
+question: |
+  Preview your form before you sign it
+subquestion: |
+  
+  Here is a preview of the form you will sign on the next page. 
+  
+  ${ al_court_bundle.as_pdf(key='preview') }
+
+  Click the image to open it in a new tab. Click the "Edit your answers" button
+  to edit your answers.
+
+  ${ action_button_html(url_action('review_VT_fee_waiver'), label='Edit your answers', color='info') }
+  
+  **Remember to come back to this window to continue and sign your form.**
+continue button field: VT_fee_waiver_preview_question    
+---
+code: |
+  signature_fields = ['users[0].signature']
+---
+code: |
+  # This is a placeholder for the addresses that will be searched
+  # for matching address to court. Edit if court venue is based on 
+  # a different address than the user's
+  addresses_to_search = [user.address for user in users]
+  
+  
+  
+
+##################### REVIEW SCREEN #######################
+---
+id: VT fee waiver review screen
+event: review_VT_fee_waiver
+question: |
+  Review your answers
+subquestion: |  
+  ${ review_screen_instructions }
+
+  ###Your court case
+  
+review:
+  - Edit: 
+    - trial_court_division
+    - recompute:
+      - trial_court_index
+      - trial_court
+    button: |
+      
+      **Is in this court division**: ${ trial_court.division_abbr }
+      
+      **Is in this county**: ${( trial_court.address.county )} County
+
+  - Edit: docket_number
+    button: |
+      **Case number**:
+      % if dont_know_docket_number:
+      Unknown
+      % else:
+      ${ showifdef("docket_number") }
+      % endif
+      
+  - Edit: case_name
+    button: |
+      **Case name**:
+      ${ case_name }
+      
+  - note: |
+      ###About you
+  - Edit: users.revisit
+    button: |
+      **Your name, contact information and signature**
+
+      % for item in users:
+      * ${ item }
+      % endfor
+
+
+  - Edit: household_size
+    button: |
+      **Number of people in your household**:
+      ${ household_size }
+      
+      
+  - note: |
+      ###Income
+
+      
+  - Edit: 
+      - public_benefits.revisit
+    button: |
+      **Public assistance**
+      
+      % for benefit in public_benefits.complete_elements():
+      * ${ benefit.display_name }
+      % endfor
+
+      % if not public_benefits.there_are_any:
+      - None
+      % endif
+
+  - Edit: 
+      - review_jobs
+    button: |
+      **Jobs**
+      
+      % if not employed:
+      
+      I do not get income from working
+      % else:
+
+      % for item in jobs:
+      % if not item.is_self_employed:
+      
+      - ${ item.source }
+      % endif
+      % endfor
+      
+      **Self employed jobs**
+      % for item in jobs:
+      % if item.is_self_employed:
+      
+      - ${ item.source }
+      % endif
+      % endfor
+      % endif
+
+  - Edit: 
+      - other_incomes.revisit
+      - recompute:
+        - other_incomes.gathered
+    button: |
+      **Other incomes**
+
+      % for income in other_incomes.complete_elements():
+      * ${ income.display_name.lower() }
+      % endfor
+
+      % if not other_incomes.there_are_any:
+      - None
+      % endif
+          
+      
+  - note: |
+      ###Expenses 
+  - Edit: expenses.revisit
+    button: |
+      **Expenses**:
+
+      % if len(expenses) == 0:
+      - None
+      % endif
+      % for item in expenses:
+      - ${ item.display_name.lower() }
+      % endfor
+
+ 
+  - note: |
+      ###Assets      
+      
+  - Edit: vehicles.revisit
+    button: |
+      **Vehicles**
+      
+      % for item in vehicles:
+      * ${ item.make } ${ item.model } ${ item.year }          
+      % endfor
+      % if not vehicles.there_are_any:
+      - None
+      % endif
+  - Edit: 
+      - real_estate.revisit
+    button: |
+      **Real estate**
+
+      % for item in real_estate.complete_elements():
+      % if item.source == "primary residence":
+      * primary residence
+      % else:
+      * ${ item.display_name.lower() }
+      % endif
+      % endfor
+      % if not real_estate.there_are_any:
+      - None
+      % endif
+
+  - Edit: bank_assets.revisit
+    button: |
+      **Bank accounts and cash**
+      
+      % for item in bank_assets:
+      - ${ item.display_name.lower() }
+      % endfor
+      % if not bank_assets.there_are_any:
+      - None
+      % endif   
+      
+  - Edit: other_assets.revisit
+    button: |
+      **Other assets**
+
+      % for item in other_assets.complete_elements():
+        - ${ item.display_name.lower() }
+      % endfor
+
+      % if not other_assets.there_are_any:
+      - None
+      % endif      
+      
+  - Edit: other_reasons_why_cannot_afford
+    button: |
+      **Other reason(s) you cannot afford the fees (optional question)**:
+      
+      % if defined("other_reasons_why_cannot_afford"):
+      % if other_reasons_why_cannot_afford == "":
+      - None
+      % else:
+      ${ other_reasons_why_cannot_afford }
+      % endif
+      % endif
+
+  - Edit: signature_date
+    button: |
+      **Date of signature for these forms**:
+      ${ signature_date }
+
+  - note: |
+      **Select Resume, below, when you are done. It will take a moment to generate your form again.**
+---
+##################### DOWNLOAD SCREEN #####################
+---
+id: download VT_fee_waiver
+event: VT_fee_waiver_download
+question: |
+  ${ download_screen_instructions_headline_one_form }
+subquestion: |
+  
+  ${ download_screen_instructions_one_form }
+
+  ${ action_button_html(url_action('review_VT_fee_waiver'), label='Edit your answers', color='info') }
+  
+  
+  ${ al_user_bundle.download_list_html() }
+  
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
+
+  
+  ${ download_screen_bottom_instructions }
+  
+  ${ collapse_template(not_seeing_email) }
+  ${ collapse_template(log_out_when_done) }
+
+progress: 100
+---
+##################### OVERFLOW + ADDENDUM #####################
+---
+attachment:
+  variable name: VT_fee_waiver_attachment.addendum
+  docx template file: VT_fee_waiver_addendum.docx
+---
+code: |
+  VT_fee_waiver_attachment.overflow_fields["public_benefits"].label = "Other public assistance that is part of the reported monthly amount"
+  VT_fee_waiver_attachment.overflow_fields["public_benefits"].overflow_trigger = 3
+  VT_fee_waiver_attachment.overflow_fields["public_benefits"].headers = [
+    {'display_name': "Public assistance"},
+  ]  
+
+  VT_fee_waiver_attachment.overflow_fields["jobs"].label = "Additional jobs"
+  VT_fee_waiver_attachment.overflow_fields["jobs"].overflow_trigger = 2
+  VT_fee_waiver_attachment.overflow_fields["jobs"].headers = [
+    {'employer': "Employer"},    
+    {'employer_name_address_phone()': "Employer address"},
+  ]  
+  
+  VT_fee_waiver_attachment.overflow_fields["vehicles"].label = "Additional vehicles"
+  VT_fee_waiver_attachment.overflow_fields["vehicles"].overflow_trigger = 4
+  #VT_fee_waiver_attachment.overflow_fields["vehicles"].headers = [
+    #{'make': "Make"},
+    #{'model': "Model"},
+    #{'year': "Year"},
+    #{'market_value': "Fair market value"},
+    #{'balance': "Amount owed"},
+  #]  
+  
+  VT_fee_waiver_attachment.overflow_fields["real_estate"].label = "Additional real estate"
+  VT_fee_waiver_attachment.overflow_fields["real_estate"].overflow_trigger = 2
+  #VT_fee_waiver_attachment.overflow_fields["real_estate"].headers = [
+    #{'display_name': "Description"},
+    #{'market_value': "Fair market value"},
+    #{'balance': "Amount owed"},
+  #]  
+
+  VT_fee_waiver_attachment.overflow_fields["other_assets"].label = "Additional assets"
+  VT_fee_waiver_attachment.overflow_fields["other_assets"].overflow_trigger = 2
+  #VT_fee_waiver_attachment.overflow_fields["other_assets"].headers = [
+    #{'display_name': "Description"},
+    #{'market_value': "Fair market value"},
+  #]  
+  
+  VT_fee_waiver_attachment.overflow_fields["other_reasons_why_cannot_afford"].overflow_trigger = 620
+  VT_fee_waiver_attachment.overflow_fields["other_reasons_why_cannot_afford"].label = "Additional reasons why I cannot afford the fees"
+  VT_fee_waiver_attachment.overflow_fields.gathered = True
+---
+##################### ATTACHMENTS #####################
+---
+objects:
+  - VT_fee_waiver_post_interview_instructions: ALDocument.using(title="NEXT STEPS - Instructions for filing this form with the court", filename="VT_fee_waiver_next_steps.docx", enabled=True, has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  - VT_fee_waiver_attachment: ALDocument.using(title="Vermont fee waiver form 600-00228", filename="VT_fee_waiver.pdf", enabled=True, has_addendum=True, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+---
+objects:
+  - al_user_bundle: ALDocumentBundle.using(elements=[VT_fee_waiver_post_interview_instructions,VT_fee_waiver_attachment], filename="VT_fee_waiver.pdf_package.pdf", title="All forms to download for your records", enabled=True)
+  - al_court_bundle: ALDocumentBundle.using(elements=[VT_fee_waiver_attachment], filename="VT_fee_waiver.pdf_package.pdf", title="All forms to download for your records", enabled=True)
+---
+attachments:
+  - name: VT fee waiver post interview instructions
+    filename: VT_fee_waiver_next_steps
+    variable name: VT_fee_waiver_post_interview_instructions[i]        
+    skip undefined: True
+    docx template file: VT_fee_waiver_next_steps.docx
+    fields:
+        - "address_county": ${ trial_court.address.county }
+        - "court_division": ${ trial_court.division_abbr }
+        - "name": ${ trial_court }
+        - "address_address": ${ trial_court.address.address }
+        - "address_unit": ${ trial_court.address.unit }
+        - "address_city": ${ trial_court.address.city }
+        - "address_state": ${ trial_court.address.state }
+        - "address_zip": ${ trial_court.address.zip }
+        - "arbitrary_attribute": ${ trial_court.arbitrary_attribute }
+        - "phone": ${ trial_court.phone }
+        - "email": ${ trial_court.email }
+  
+  - name: VT fee waiver attachment
+    filename: VT_fee_waiver.pdf     
+    variable name: VT_fee_waiver_attachment[i]        
+    skip undefined: True
+    pdf template file: VT_fee_waiver.pdf
+    fields:
+      - "court_division": |
+          % if defined("trial_court.division_abbr"):
+            ${ trial_court.division_abbr.upper()  }
+          % endif
+      - "docket_number": ${ docket_number }
+      - "trial_court_county": ${ trial_court.address.county }
+      - "case_name": ${ case_name }
+      - "users1_name_full": ${ users[0] }
+      - "users1_name_full__1": ${ users[0] }
+      - "users1_address_line_one": ${ users[0].address.line_one() }
+      - "users1_address_line_two": ${ users[0].address.line_two() }
+      - "users1_mailing_address_on_one_line": |
+          % if users1_mailing_address_different:
+          ${ users[0].mailing_address.on_one_line() }
+          % endif
+      - "users1_email": ${ users[0].email }
+      - "users1_phone_number": ${ users[0].daytime_phone_number }
+      - "household_size": ${ household_size }
+      - "employed_yes": ${ employed }
+      - "employed_no": ${ not employed }
+      
+      - "users1_employer_0_name": |
+          % if len(jobs) > 0 and jobs[0].is_self_employed:
+            Self-employed
+          % elif len(jobs) > 0:
+            ${ jobs[0].employer }
+          % else:
+            
+          % endif
+      - "users1_employer_0_address_one_line": |
+          % if defined("jobs[0].employer.address"):
+          ${ jobs[0].employer.address.on_one_line() }
+          % endif
+
+      - "users1_employer_1_name": |
+          % if len(jobs) > 1 and jobs[1].is_self_employed:
+            Self-employed
+          % elif len(jobs) > 1:
+            ${ jobs[1].employer }
+          % else:
+            
+          % endif
+      - "users1_employer_1_address_one_line": |
+          % if defined("jobs[1].employer.address"):
+          ${ jobs[1].employer.address.on_one_line() }
+          % endif
+      
+      - "users1_receives_benefits_yes": |
+          % if public_benefits.selected_types.any_true():
+          ${ True }
+          % endif
+      - "users1_receives_benefits_no": |
+          % if not public_benefits.selected_types.any_true():
+          ${ True }
+          % endif
+   
+      - "users1_benefits": |
+          % if public_benefits.selected_types.any_true():
+
+          % if public_benefits[0].source == "other":
+          ${ showifdef("public_benefits[0].display_name") }  ${ showifdef("public_benefits[1].source") }  ${ showifdef("public_benefits[2].source") }
+
+          % elif public_benefits[1].source == "other":
+          ${ showifdef("public_benefits[0].source") }  ${ showifdef("public_benefits[1].display_name") }  ${ showifdef("public_benefits[2].source") }
+
+          % elif public_benefits[2].source == "other":
+          ${ public_benefits[0].source }  ${ public_benefits[1].source }  ${ public_benefits[2].display_name }
+     
+
+          % else:
+          ${ showifdef("public_benefits[0].source") }  ${ showifdef("public_benefits[1].source") }  ${ showifdef("public_benefits[2].source") }
+           
+          % endif
+          % endif
+
+          
+      - "users1_benefits_monthly_amount": |
+          % if not public_benefits.selected_types.any_true():
+           
+          % else:
+          ${ currency(public_benefits.total(times_per_year=12),symbol="") }
+          % endif
+      
+      - "users1_income_employment_monthly_amount": |
+          % if not employed:
+          
+          % elif len(public_benefits) > 0:
+          
+          % else:
+          ${ currency(jobs.total(source=["full time","part time"],times_per_year=12),symbol="") }
+          % endif
+      
+      - "users1_income_unemployment_monthly_amount": |
+          % if other_incomes.total(source=["unemployment income"],times_per_year=12) == 0:
+           
+          % else:
+          ${ currency(other_incomes.total(source=["unemployment income"],times_per_year=12),symbol="") }
+          % endif      
+
+      - "users1_income_child_support_monthly_amount": |
+          % if other_incomes.total(source=["child support income"],times_per_year=12) == 0:
+            
+          % else:
+          ${ currency(other_incomes.total(source=["child support income"],times_per_year=12),symbol="") }
+          % endif           
+      
+      - "users1_income_other_monthly_amount": |
+          % if other_incomes.total(exclude_source=["unemployment income","child support income"],times_per_year=12) == 0:
+            
+          % else:
+          ${ currency(other_incomes.total(exclude_source=["unemployment income","child support income"],times_per_year=12),symbol="") }
+          % endif   
+      
+      - "users1_income_self_employment_monthly_amount": |
+          % if defined("jobs"):
+          ${ currency(jobs.total(source=["self employed"],times_per_year=12)) }
+          % else:
+          
+          % endif
+
+      - "users1_income_monthly_total": |
+          % if defined("jobs"):
+          ${ currency(float(jobs.total(source=["full time","part time","self employed"],times_per_year=12) + other_incomes.total(times_per_year=12)),symbol="") }
+          % elif employed:
+          ${ currency(jobs.total(source=["full time","part time"],times_per_year=12) + other_incomes.total(times_per_year=12),symbol="") }
+          % elif other_incomes.selected_types.any_true():
+          ${ currency(other_incomes.total(times_per_year=12),symbol="") }
+          % else:
+          0.00      
+          % endif
+      - "users1_income_annual_total": |
+          % if defined("jobs"):
+          ${ currency(float(jobs.total(source=["full time","part time","self employed"],times_per_year=1) + other_incomes.total(times_per_year=1)),symbol="") }
+          % elif employed:
+          ${ currency(jobs.total(source=["full time","part time"],times_per_year=1) + other_incomes.total(times_per_year=1),symbol="") }
+          % elif other_incomes.selected_types.any_true():
+          ${ currency(other_incomes.total(times_per_year=1),symbol="") }
+          % else:
+          0.00      
+          % endif
+
+  
+      
+      - "users1_expenses_rent_mortgage_monthly_amount": |
+          % if expenses.total(source=["rent"],times_per_year=12) + expenses.total(source=["mortgage"],times_per_year=12) == 0:
+           
+          % else:
+          ${ currency(expenses.total(source=["rent"],times_per_year=12) + expenses.total(source=["mortgage"],times_per_year=12),symbol="") }  
+          % endif      
+       
+      - "users1_expenses_electric_monthly_amount": |
+          % if expenses.total(source=["electric"],times_per_year=12) == 0:
+           
+          % else:
+          ${ currency(expenses.total(source=["electric"],times_per_year=12),symbol="") }   
+          % endif  
+         
+      - "users1_expenses_phone_monthly_amount": |
+          % if expenses.total(source=["phone"],times_per_year=12) == 0:
+           
+          % else:
+          ${ currency(expenses.total(source=["phone"],times_per_year=12),symbol="") }   
+          % endif  
+      - "users1_expenses_fuel_monthly_amount": |
+          % if expenses.total(source=["fuel"],times_per_year=12) == 0:
+           
+          % else:
+          ${ currency(expenses.total(source=["fuel"],times_per_year=12),symbol="") }   
+          % endif  
+      - "users1_expenses_food_monthly_amount": |
+          % if expenses.total(source=["food"],times_per_year=12) == 0:
+           
+          % else:
+          ${ currency(expenses.total(source=["food"],times_per_year=12),symbol="") }   
+          % endif  
+      - "users1_expenses_clothes_monthly_amount": |
+          % if expenses.total(source=["clothing"],times_per_year=12) == 0:
+           
+          % else:
+          ${ currency(expenses.total(source=["clothing"],times_per_year=12),symbol="") }   
+          % endif  
+      - "users1_expenses_medical_monthly_amount": |
+          % if expenses.total(source=["medical"],times_per_year=12) == 0:
+           
+          % else:
+          ${ currency(expenses.total(source=["medical"],times_per_year=12),symbol="") }   
+          % endif  
+      - "users1_expenses_child_support_monthly_amount": |
+          % if expenses.total(source=["child support"],times_per_year=12) == 0:
+           
+          % else:
+          ${ currency(expenses.total(source=["child support"],times_per_year=12),symbol="") }   
+          % endif  
+      - "users1_expenses_auto_loan_monthly_amount": |
+          % if expenses.total(source=["auto loan"],times_per_year=12) == 0:
+           
+          % else:
+          ${ currency(expenses.total(source=["auto loan"],times_per_year=12),symbol="") }   
+          % endif  
+      - "users1_expenses_property_tax_monthly_amount": |
+          % if expenses.total(source=["property tax"],times_per_year=12) == 0:
+           
+          % else:
+          ${ currency(expenses.total(source=["property tax"],times_per_year=12),symbol="") }   
+          % endif  
+      - "users1_expenses_all_insurance_monthly_amount": |
+          % if expenses.total(source=["health insurance", "auto insurance", "other insurance"],times_per_year=12) == 0:
+           
+          % else:
+          ${ currency(expenses.total(source=["health insurance", "auto insurance", "other insurance"],times_per_year=12),symbol="") }  
+          % endif  
+      - "users1_expenses_other_monthly_amount": |
+          % if expenses.total(exclude_source=["rent", "mortgage", "electric", "phone", "fuel", "food", "clothing", "medical", "child support", "auto loan", "property tax", "health insurance", "auto insurance", "other insurance" ],times_per_year=12) == 0:
+           
+          % else:
+          ${ currency(expenses.total(exclude_source=["rent", "mortgage", "electric", "phone", "fuel", "food", "clothing", "medical", "child support", "auto loan", "property tax", "health insurance", "auto insurance", "other insurance" ],times_per_year=12),symbol="") } 
+          % endif  
+      - "users1_expenses_monthly_total": ${ currency(expenses.total(times_per_year=12),symbol="") }
+      
+      - "assets_yes": |
+          % if vehicles.selected_types.any_true():
+          ${ "True" }
+          % elif real_estate.selected_types.any_true():
+          ${ "True" }
+          % elif bank_assets.selected_types.any_true():
+          ${ "True" }
+          % elif other_assets.selected_types.any_true():
+          ${ "True" }
+          % endif
+      - "assets_no": |
+          % if not vehicles.selected_types.any_true() and not real_estate.selected_types.any_true() and not bank_assets.selected_types.any_true() and not other_assets.selected_types.any_true():
+          ${ "True" }
+          % endif
+
+      - "users1_assets_vehicle_0_amount_owed": ${ currency(vehicles[0].balance,symbol="") }
+      - "users1_assets_vehicle_0_description": |
+           ${ vehicles[0].make } ${ vehicles[0].model } ${ vehicles[0].year } 
+      - "users1_assets_vehicle_0_net_value": ${ currency(vehicles[0].market_value - vehicles[0].balance,symbol="") }
+      - "users1_assets_vehicle_0_market_value": ${ currency(vehicles[0].market_value,symbol="") }
+      - "users1_assets_vehicle_1_description": |
+           ${ vehicles[1].make } ${ vehicles[1].model } ${ vehicles[1].year } 
+      - "users1_assets_vehicle_1_market_value": ${ currency(vehicles[1].market_value,symbol="") }
+      - "users1_assets_vehicle_1_amount_owed": ${ currency(vehicles[1].balance,symbol="") }
+      - "users1_assets_vehicle_1_net_value": ${ currency(vehicles[1].market_value - vehicles[1].balance,symbol="") }
+      - "users1_assets_vehicle_2_description": |
+           ${ vehicles[2].make } ${ vehicles[2].model } ${ vehicles[2].year } 
+      - "users1_assets_vehicle_2_amount_owed": ${ currency(vehicles[2].balance,symbol="") }
+      - "users1_assets_vehicle_2_net_value": ${ currency(vehicles[2].market_value - vehicles[2].balance,symbol="") }
+      - "users1_assets_vehicle_2_market_value": ${ currency(vehicles[2].market_value,symbol="") }
+      - "users1_assets_vehicle_3_description": |
+           ${ vehicles[3].make } ${ vehicles[3].model } ${ vehicles[3].year } 
+      - "users1_assets_vehicle_3_market_value": ${ currency(vehicles[3].market_value,symbol="") }
+      - "users1_assets_vehicle_3_amount_owed": ${ currency(vehicles[3].balance,symbol="") }
+      - "users1_assets_vehicle_3_net_value": ${ currency(vehicles[3].market_value - vehicles[3].balance,symbol="") }
+      
+      - "users1_assets_real_estate_0_description": |
+          % if defined("real_estate[0].market_value"):
+          % if real_estate[0].source == "primary residence":
+          Primary residence
+          % elif real_estate[0].source == "rental":
+          Residential rental
+          % else:
+          ${ real_estate[0].display_name }
+          % endif
+          % endif
+      - "users1_assets_real_estate_0_market_value": |
+          % if defined("real_estate[0].market_value"):
+          ${ currency(real_estate[0].market_value,symbol="") }
+          % endif
+      - "users1_assets_real_estate_0_amount_owed": ${ currency(real_estate[0].balance,symbol="") }
+      - "users1_assets_real_estate_0_net_value": ${ currency(real_estate[0].market_value - real_estate[0].balance,symbol="") }
+
+      - "users1_assets_real_estate_1_description": |
+          % if defined("real_estate[1].market_value"):
+          % if real_estate[1].source == "primary residence":
+          Primary residence
+          % elif real_estate[1].source == "rental":
+          Residential rental
+          % else:
+          ${ real_estate[1].display_name }
+          % endif
+          % endif
+      - "users1_assets_real_estate_1_market_value": ${ currency(real_estate[1].market_value,symbol="") }
+      - "users1_assets_real_estate_1_amount_owed": ${ currency(real_estate[1].balance,symbol="") }
+      - "users1_assets_real_estate_1_net_value": ${ currency(real_estate[1].market_value - real_estate[1].balance,symbol="") }
+      
+      - "users1_assets_checking_accounts": |
+          % if bank_assets.market_value(source=["checking account"]) == 0:
+           
+          % else:
+          ${ currency(bank_assets.market_value(source=["checking account"]),symbol="") }
+          % endif            
+     
+      - "users1_assets_cash_on_hand": |
+          % if bank_assets.market_value(source=["cash on hand"]) == 0:
+           
+          % else:
+          ${ currency(bank_assets.market_value(source=["cash on hand"]),symbol="") }
+          % endif      
+      - "users1_assets_savings_accounts": |
+          % if bank_assets.market_value(source=["savings account"]) == 0:
+           
+          % else:
+          ${ currency(bank_assets.market_value(source=["savings account"]),symbol="") }
+          % endif      
+      - "users1_assets_cash_total": ${ currency(bank_assets.market_value(),symbol="") }
+      
+      - "users1_assets_other_0_market_value": ${ currency(other_assets[0].market_value,symbol="") }
+      - "users1_assets_other_0_description": ${ other_assets[0].display_name }
+      - "users1_assets_other_1_market_value": ${ currency(other_assets[1].market_value,symbol="") }
+      - "users1_assets_other_1_description": ${ other_assets[1].display_name }
+      
+      - "other_reasons_why_cannot_afford": ${VT_fee_waiver_attachment.safe_value("other_reasons_why_cannot_afford")}
+      - "signature_date": ${ signature_date }
+      - "users1_signature": ${ users[0].signature_if_final(i) }

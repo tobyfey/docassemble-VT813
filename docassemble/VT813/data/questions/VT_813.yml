@@ -5,7 +5,7 @@ include:
   - docassemble.ALToolbox:phone-number-validation.yml
   - docassemble.ALToolbox:al_income.yml
   - docassemble.VTSharedYMLFile:VTSharedYMLFile.yml
-
+  - VTFinAffSelfEmplPart.yml
 ---
 id: all_courts object
 objects:
@@ -88,11 +88,14 @@ code: |
 id: sections
 sections:
   - intro: Is this interview right for you
-  - about_you: You and your household
+  - about_you: About you
+  - other_party: The other party
+  - children: About kids
   - case_info: Your court case
   - your_income: Your income
+  - your_loans: Your loans
+  - your_debts: Your debts
   - your_expenses: Your expenses
-  - your_assets: Your property and assets
   - review_VT_813: Review your answers
   - sign: Sign your document
   - get_docs: Download your document
@@ -111,80 +114,115 @@ code: |
   # Below sets the user_role by asking a question.
   # You can set user_role directly instead to either 'plaintiff' or 'defendant'
   nav.set_section('intro')
+  set_progress(5)
 
   VT_fee_waiver_intro
-  set_progress(10)
   important_notes_to_user
-  #user_ask_role
   
-  set_progress(10)
   nav.set_section('about_you')
+  set_progress(10)
+  
   users.gather()
   users[0].address.address
   users[0].daytime_phone_number
   users[0].email
-  #household_size
+  
+  nav.set_section('other_party')
+  set_progress(15)
+  #collect other party info
+  other_parties[0].name.first
+  other_parties[0].birthdate
+  
+  nav.set_section('children')
+  set_progress(20)
+  
+  shared_children.gather()
+  other_children.gather()
   
   nav.set_section('case_info')
+  set_progress(30)
+  user_ask_role
   case_name
   docket_number
   
   #This is where we collect the desired court division and county. With those two pieces of info and our comprehensive courts_list_full spreadsheet, the exact court is determined.
-  user_selected_county
-  trial_court.address.county
+  #user_selected_county
+  #trial_court.address.county
   
-  shared_children.gather()
-  other_children.gather()
+  
   nav.set_section('your_income')
+  set_progress(40)
   if len(public_benefits) > 0:
     public_benefits.review_items
+  set_progress(42)
   if len(jobs) > 0:
     review_jobs
-  set_progress(40)
-    
+
+  set_progress(44)    
+  paystub_instructions
+  
+  set_progress(48)
   if len(other_incomes) > 0:
     other_incomes.review_items
-
-  set_progress(50)
-  nav.set_section('your_expenses')
-  expenses_intro
-  if len(household_expenses) > 0:
-    household_expenses.review_items
-  if len(vehicle_expenses) > 0:
-    vehicle_expenses.review_items
-  if len(insurance_expenses) > 0:
-    insurance_expenses.review_items
-  if len(personal_expenses) > 0:
-    personal_expenses.review_items
-  if len(children_expenses) > 0:
-    children_expenses.review_items
-  set_progress(60)
-  nav.set_section('your_assets')
   
-  if len(primary_residence_loans) > 0:
-    primary_residence_loans.review_items
-  if len(other_loans) > 0:
-    other_loans.review_items
-  if len(real_estate_loans) > 0:
-    real_estate_loans.review_items
-  if len(vehicle_loans) > 0:
-    vehicle_loans.review_items
-  if len(credit_card_debt) > 0:
-    credit_card_debt.review_items
-  if len(other_debt) > 0:
-    other_debt.review_items
-       
-  set_progress(70)
-  
-      
-
-  set_progress(80)
-    
-  set_progress(90)
   employer_jobs
   self_employed_jobs
   employer_jobs_review_table
   self_employed_jobs_review_table
+  
+  nav.set_section('your_loans')
+  set_progress(50)
+  
+  if len(primary_residence_loans) > 0:
+    primary_residence_loans.review_items
+  set_progress(52)
+  if len(real_estate_loans) > 0:
+    real_estate_loans.review_items
+  set_progress(55)
+  if len(vehicle_loans) > 0:
+    vehicle_loans.review_items
+  set_progress(57)
+  if len(other_loans) > 0:
+    other_loans.review_items
+  
+  
+  nav.set_section('your_debts')
+  set_progress(60)
+  if len(credit_card_debt) > 0:
+    credit_card_debt.review_items
+  set_progress(65)
+  if len(other_debt) > 0:
+    other_debt.review_items
+
+  nav.set_section('your_expenses')
+  set_progress(70)
+  expenses_intro
+  
+  if shared_children.there_are_any:
+    if len(children_expenses) > 0:
+      children_expenses.review_items
+    set_progress(72)
+    total_monthly_childcare_costs
+    extraordinary_expenses
+  set_progress(74)
+      
+  if len(household_expenses) > 0:
+    household_expenses.review_items
+  set_progress(76)
+  if len(vehicle_expenses) > 0:
+    vehicle_expenses.review_items
+  set_progress(77)
+  if len(insurance_expenses) > 0:
+    insurance_expenses.review_items
+  set_progress(78)
+  if len(personal_expenses) > 0:
+    personal_expenses.review_items
+  set_progress(79)
+
+  
+      
+
+  set_progress(80)
   interview_order_VT_813 = True
 
 ---
@@ -197,7 +235,9 @@ mandatory: True
 code: |
   al_intro_screen
   interview_order_VT_813
-  nav.set_section('review_VT_813')
+  nav.set_section('review_VT_813')  
+  set_progress(90)
+  
   trial_court.address.county
   VT_fee_waiver_preview_question
   
@@ -225,6 +265,24 @@ code: |
   set_progress(100)
   VT_fee_waiver_download
 ---
+id: other_children object
+objects:
+  - other_party: ALPeopleList.using(complete_attribute='name.first',ask_number=True,target_number=1)
+---
+sets:
+  - other_parties[0].name.first
+  - other_parties[0].name.last
+  - other_parties[0].name.middle
+  - other_parties[0].name.suffix
+id: names of opposing parties
+question: |
+  Name of other party
+fields:
+  - code: |
+      other_parties[0].name_fields(person_or_business='person')
+  - Date of birth: other_parties[0].birthdate
+    datatype: BirthDate
+---
 id: shared_children object
 objects:
   - shared_children: ALPeopleList.using(complete_attribute='complete')
@@ -247,16 +305,17 @@ code: |
   other_children[i].complete = True
 ---
 id: are there shared children
-question: Minor Children with the Other Party
+question: Minor Children with the ${ other_parties[0].name.full() }
 fields:
-  - Do you have Minor Children with the other party?: shared_children.there_are_any
+  - Do you have Minor Children with ${ other_parties[0].name.full() }?: shared_children.there_are_any
     datatype: yesnoradio
 ---
 id: shared children
-question: ${ ordinal(i) } Child with other pary
+question: ${ ordinal(i) } Child with ${ other_parties[0].name.full() }
 fields:
   - Name: shared_children[i].name
   - Date of Birth: shared_children[i].birthdate
+    datatype: BirthDate
   - Address: shared_children[i].address
   - Are you ordered to pay child support for this child?: shared_children[i].child_support
     datatype: yesnoradio
@@ -698,6 +757,12 @@ fields:
   - Your monthly net income: jobs[i].to_add[j].value
     datatype: currency
 ---
+id: sets self employment income to net_income from form
+if: j in ["self employed"]
+code: |
+  net_income_order
+  jobs[i].to_add[j].value = net_income
+---
 id: sets self employed times_per_year to monthly
 if: j in ["self employed"]
 code: |
@@ -710,17 +775,17 @@ code: |
 id: job complete
 generic object: ALItemizedJob
 code: |
-  if len(public_benefits) == 0:
-    x.source
-    x.wages_added
-    x.to_add.gather()
+  x.source
+  x.wages_added
+  x.to_add.gather()
   if x.is_self_employed:
     x.times_per_year
     # for fee waiver form we are not collecting items to subtract from wages
     # x.to_subtract.gather()
   else:
     if not x.is_self_employed:
-      x.employer.name.first    
+      x.employer.name.first
+      x.healthcare_available    
   x.complete = True
 ---
 id: job itemized value complete
@@ -858,20 +923,8 @@ fields:
     validation messages:
       number: |
         Enter a number, like 40. If you don't know, enter your best guess.
-  - Could you get insurance through this job (even if your children are not enrolled)?: jobs[i].healthcare_available
+  - Have you included overtime income?: jobs[i].overtime_info
     datatype: yesnoradio
-  - Total Monthly Family Health Insurance Cost to Employee: jobs[i].health_insurance_family_cost
-    datatype: currency
-    show if: jobs[i].healthcare_available
-  - Total Monthly Two Person Cost to Employee: jobs[i].health_insurance_2_person_cost
-    datatype: currency
-    show if: jobs[i].healthcare_available
-  - Total Monthly Cost for Single Person Coverave to Employee: jobs[i].health_insurance_single_person_cost
-    datatype: currency
-    show if: jobs[i].healthcare_available
-  - Are your kids enrolled?: jobs[i].kids_enrolled
-    datatype: yesnoradio
-    show if: jobs[i].healthcare_available
   - note: |
       ---
       
@@ -904,6 +957,25 @@ fields:
     show if: jobs[i].pay_personal_expenses
   - Does the job have other incomes, like tips, commissions or bonuses?: jobs[i].to_add.there_is_another
     datatype: yesnoradio
+---
+---
+question: Healthcare benefits
+fields:
+  - Could you get insurance through this job (even if your children are not enrolled)?: jobs[i].healthcare_available
+    datatype: yesnoradio
+  - Total Monthly Family Health Insurance Cost to Employee: jobs[i].health_insurance_family_cost
+    datatype: currency
+    show if: jobs[i].healthcare_available
+  - Total Monthly Two Person Cost to Employee: jobs[i].health_insurance_2_person_cost
+    datatype: currency
+    show if: jobs[i].healthcare_available
+  - Total Monthly Cost for Single Person Coverave to Employee: jobs[i].health_insurance_single_person_cost
+    datatype: currency
+    show if: jobs[i].healthcare_available
+  - Are your kids enrolled?: jobs[i].kids_enrolled
+    datatype: yesnoradio
+    show if: jobs[i].healthcare_available
+
 ---
 id: sets default attributes if personal expenses arent paid
 if: not jobs[i].pay_personal_expenses
@@ -1239,6 +1311,13 @@ question: |
 subquestion: |  
   DEADLINE FOR FILING: This form must be filed with the court before or at your first case manager's conference. If no conference is scheduled it must be filed at least seven (7) days before your first scheduled court hearing.
 continue button field: important_notes_to_user
+---
+id: paystub instructions
+question: |
+  Important
+subquestion: |
+   You will need to attach 4 paystubs to this form when you give it to the court. You will need to attach Sched C if you used that for any self-employment income.
+continue button field: paystub_instructions
 ---
 ############################### ABOUT COURT CASE ###############################
 ---
@@ -2064,6 +2143,37 @@ columns:
 edit:
   - source
   - value
+---
+question: YOUR CHILD CARE COSTS FOR CHILDREN WITH ${ other_parties[0].name.full() }
+subquestion: |
+  If monthly amounts change during the year, use total annual amount divided by 12.
+fields:
+  - Total Monthly Childcare Costs: total_monthly_childcare_costs
+    datatype: currency
+  - Subsidy: childcare_subsidy
+    datatype: currency
+---
+question: Your Extraordinary Expenses For Children With ${ other_parties[0].name.full() }
+fields:
+  - note: |
+      **Child's Uninsured Medical Expenses**
+  - Type: uninsured_medical_expenses_type
+    required: False
+  - Cost per month: uninsured_medical_expenses_amount
+    required: False
+  - note: |
+      **Child's Educational Expenses**
+  - Type: educational_expenses_type
+    required: False
+  - Cost per month: educational_expenses_amount
+    required: False
+  - note: |
+      **Child's Special Needs Expenses**
+  - Type: special_needs_expenses_type
+    required: False
+  - Cost per month: special_needs_expenses_amount
+    required: False
+continue button field: extraordinary_expenses
 ---
 id: primary_residence_loans.terms_ordered
 variable name: primary_residence_loans.terms_ordered

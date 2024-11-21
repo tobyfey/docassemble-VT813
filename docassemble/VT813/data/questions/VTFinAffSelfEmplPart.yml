@@ -1,0 +1,754 @@
+#SELF-EMPLOYMENT WORKSHEET FOR 813A
+
+
+
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - docassemble.ALToolbox:al_income.yml
+  - docassemble.ALAnyState:any_state.yml
+  - docassemble.VTSharedYMLFile:VTSharedYMLFile.yml
+---
+features:
+  css: style.css
+---
+objects:
+  - al_logo: DAStaticFile.using(filename="LSV_bug.png")
+---
+images:
+  big_logo: LSV_logo.png 
+---
+metadata:
+  title: >-
+    813A Self-employment worksheet
+  short title: >-
+    813A Self-employment
+  description: |-
+    This interview helps someone in Vermont fill in the self-employment worksheet part of the 813A financial affidavit in Vermont.
+  tags:
+    - "FA-04-00-00-00"
+    - "FA-05-00-00-00"
+    - "FA-06-00-00-00"
+  authors:
+    - VTCourtForms by Legal Services Vermont
+  original_form:
+    - https://vtlawhelp.org/cfp/fill-out-form-813a-financial-affidavit-income-and-expenses
+  help_page_url: >-
+    https://vtlawhelp.org/cfp/fill-out-form-813a-financial-affidavit-income-and-expenses
+  help_page_title: >-
+    VTLawHelp.org website
+  allowed_courts: []
+  typical_role: "plaintiff"
+  al_weaver_version: "1.10.1"
+  generated_on: "2023-08-05"
+---
+code: |
+  # This controls the default country and list of states in address field questions
+  AL_DEFAULT_COUNTRY = "US"
+---
+code: |
+  # This controls the default state in address field questions
+  AL_DEFAULT_STATE = "VT"
+---
+code: |
+  github_repo_name =  'docassemble-VTFinAffSelfEmplPart'
+---
+code: |
+  interview_short_title = "813A Self-employment"
+---
+code: |
+  al_form_type = "existing_case" 
+---
+objects:
+  - users: ALPeopleList.using(there_are_any=True)
+---
+sections:
+  - review_vtfinaffselfemplpart: Review your answers
+---
+#################### Interview order #####################
+comment: |
+  Controls order and branching logic for questions specific to this form
+id: interview_order_vtfinaffselfemplpart
+code: |
+  # Set the allowed courts for this interview
+  #allowed_courts = []
+  #nav.set_section("review_vtfinaffselfemplpart")
+  #user_role = "plaintiff"
+  #user_ask_role = "plaintiff"
+  selfemployment_worksheet
+  self_empl_gross_sales_monthly_amount
+  self_empl_cgs[0].value
+  self_empl_office[0].value
+  self_empl_employees[0].value
+  self_empl_auto[0].value
+  self_empl_common_exp[0].value
+  self_empl_other_insurances[0].value
+  self_empl_debts[0].value
+  self_empl_other_expenses.gather()
+  net_income
+  interview_order_vtfinaffselfemplpart = True
+---
+#################### Interview order #####################
+comment: |
+  Controls order and branching logic to determine net income for 813
+id: net_income_order
+code: |
+  selfemployment_worksheet
+  self_empl_gross_sales_monthly_amount
+  self_empl_cgs[0].value
+  self_empl_office[0].value
+  self_empl_employees[0].value
+  self_empl_auto[0].value
+  self_empl_common_exp[0].value
+  self_empl_other_insurances[0].value
+  self_empl_debts[0].value
+  self_empl_other_expenses.gather()
+  net_income_order = True
+---
+code: |
+  self_empl_other_expenses[i].times_per_year = 12
+---
+###################### Main order ######################
+comment: |
+  This block includes the logic for standalone interviews.
+  Delete mandatory: True to include in another interview
+mandatory: False
+code: |
+  #al_intro_screen
+  #vtfinaffselfemplpart_intro
+  interview_order_vtfinaffselfemplpart
+  #signature_date
+  # Store anonymous data for analytics / statistics
+  #store_variables_snapshot(
+      #persistent=True,
+      #data={
+          #"zip": showifdef("users[0].address.zip"),
+          #"reached_interview_end": True,
+      #},
+  #)
+  vtfinaffselfemplpart_download
+---
+id: self employment worksheet
+question: |
+  Self-employment worksheet
+subquestion: |
+  This worksheet is on page 11 on the 813A paper form.
+  
+  Only complete these questions if you have a self-employed business and you can't include an IRS Schedule C.
+continue button field: selfemployment_worksheet
+---
+id: Your monthly gross sales or receipts
+question: |
+  Your monthly gross sales or receipts from self-employment
+fields:
+  - "Gross sales": self_empl_gross_sales_monthly_amount
+    datatype: currency
+    min: 0
+    
+    
+---
+objects: 
+  - self_empl_cgs: ALExpenseList.using(auto_gather = False, gathered = True)
+---
+code: |
+  self_empl_cgs[0].source = "Cost of goods sold"
+  self_empl_cgs[0].times_per_year = 12
+---
+id: Cost of goods sold
+question: |
+  Monthly business expenses from self-employment
+subquestion: |
+  Now we'll collect your monthly expenses from self-employment.
+fields:
+  - "Cost of goods sold": self_empl_cgs[0].value
+    datatype: currency
+    min: 0
+    required: false
+---
+objects: 
+  - self_empl_office: ALExpenseList.using(auto_gather = False, gathered = True)
+---
+code: |
+  self_empl_office[0].source = "Rent paid"
+  self_empl_office[0].times_per_year = 12
+---
+code: |
+  self_empl_office[1].source = "Interest paid on business mortgage"
+  self_empl_office[1].times_per_year = 12
+---
+code: |
+  self_empl_office[2].source = "Equipment"
+  self_empl_office[2].times_per_year = 12
+---
+code: |
+  self_empl_office[3].source = "Depreciation"
+  self_empl_office[3].times_per_year = 12
+---
+code: |
+  self_empl_office[4].source = "Depletion"
+  self_empl_office[4].times_per_year = 12
+---
+code: |
+  self_empl_office[5].source = "Other property"
+  self_empl_office[5].times_per_year = 12
+---
+code: |
+  self_empl_office[6].source = "Repairs"
+  self_empl_office[6].times_per_year = 12
+---
+code: |
+  self_empl_office[7].source = "Utilities and phone"
+  self_empl_office[7].times_per_year = 12
+---
+code: |
+  self_empl_office[8].source = "Office expenses"
+  self_empl_office[8].times_per_year = 12
+---
+code: |
+  self_empl_office[9].source = "Supplies"
+  self_empl_office[9].times_per_year = 12
+---
+id: Office and equipment expenses
+question: |
+  Monthly business expenses from self-employment
+subquestion: |
+  Office and equipment expenses for your business
+fields:
+  - "Rent paid for your business location": self_empl_office[0].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Interest paid on mortgage if you own your business location": self_empl_office[1].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Equipment": self_empl_office[2].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Depreciation": self_empl_office[3].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Depletion": self_empl_office[4].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Other property": self_empl_office[5].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Repairs": self_empl_office[6].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Utilities and phone": self_empl_office[7].value
+    datatype: currency
+    min: 0
+    required: false  
+  - "Office expenses": self_empl_office[8].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Supplies": self_empl_office[9].value
+    datatype: currency
+    min: 0
+    required: false
+---
+objects: 
+  - self_empl_employees: ALExpenseList.using(auto_gather = False, gathered = True)
+---
+code: |
+  self_empl_employees[0].source = "Wages paid"
+  self_empl_employees[0].times_per_year = 12
+---
+code: |
+  self_empl_employees[1].source = "Commissions paid"
+  self_empl_employees[1].times_per_year = 12
+---
+code: |
+  self_empl_employees[2].source = "Employee benefit programs"
+  self_empl_employees[2].times_per_year = 12
+---
+code: |
+  self_empl_employees[3].source = "Pension paid"
+  self_empl_employees[3].times_per_year = 12
+---
+id: Wages and other employee expenses
+question: |
+  Monthly business expenses from self-employment
+subquestion: |
+  Wages and other employee expenses for your business
+fields:
+  - "Wages paid": self_empl_employees[0].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Commissions paid": self_empl_employees[1].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Employee benefit programs": self_empl_employees[2].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Pension paid": self_empl_employees[3].value
+    datatype: currency
+    min: 0
+    required: false
+---
+objects: 
+  - self_empl_auto: ALExpenseList.using(auto_gather = False, gathered = True)
+  - self_empl_travel: ALExpenseList.using(auto_gather = False, gathered = True)
+---
+code: |
+  self_empl_auto[0].source = "Auto insurance"
+  self_empl_auto[0].times_per_year = 12
+---
+code: |
+  self_empl_auto[1].source = "Auto maintenance"
+  self_empl_auto[1].times_per_year = 12
+---
+code: |
+  self_empl_auto[2].source = "Auto registration"
+  self_empl_auto[2].times_per_year = 12
+---
+code: |
+  self_empl_auto[3].source = "Gasoline"
+  self_empl_auto[3].times_per_year = 12
+---
+code: |
+  self_empl_travel[0].source = "Travel"
+  self_empl_travel[0].times_per_year = 12
+---
+code: |
+  self_empl_travel[1].source = "Meals and Entertainment"
+  self_empl_travel[1].times_per_year = 12
+---
+id: Auto travel and meal expenses
+question: |
+  Monthly business expenses from self-employment
+subquestion: |
+  Auto, travel and meal expenses for your business
+fields:
+  - "Auto insurance": self_empl_auto[0].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Auto maintenance": self_empl_auto[1].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Auto registration": self_empl_auto[2].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Gasoline": self_empl_auto[3].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Travel": self_empl_travel[0].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Meals and entertainment": self_empl_travel[1].value
+    datatype: currency
+    min: 0
+    required: false
+---
+objects: 
+  - self_empl_common_exp: ALExpenseList.using(auto_gather = False, gathered = True)
+---
+code: |
+  self_empl_common_exp[0].source = "Advertising"
+  self_empl_common_exp[0].times_per_year = 12  
+---
+code: |
+  self_empl_common_exp[1].source = "Dues and publications"
+  self_empl_common_exp[1].times_per_year = 12  
+---
+code: |
+  self_empl_common_exp[2].source = "Legal and professional fees"
+  self_empl_common_exp[2].times_per_year = 12  
+---
+code: |
+  self_empl_common_exp[3].source = "Laundry and cleaning"
+  self_empl_common_exp[3].times_per_year = 12  
+---
+id: Other common business expenses
+question: |
+  Monthly business expenses from self-employment
+subquestion: |
+  Other common expenses for your business
+fields:
+  - "Advertising": self_empl_common_exp[0].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Dues and publications": self_empl_common_exp[1].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Legal and professional fees": self_empl_common_exp[2].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Laundry and cleaning": self_empl_common_exp[3].value
+    datatype: currency
+    min: 0
+    required: false
+---
+objects: 
+  - self_empl_other_insurances: ALExpenseList.using(auto_gather = False, gathered = True)
+---
+code: |
+  self_empl_other_insurances[0].source = "First other insurance"
+  self_empl_other_insurances[0].times_per_year = 12
+---
+code: |
+  self_empl_other_insurances[1].source = "Second other insurance"
+  self_empl_other_insurances[1].times_per_year = 12
+---
+id: Insurance that is not health insurance
+question: |
+  Monthly business expenses from self-employment
+subquestion: |
+  Insurance expenses for your business (Do not include health insurance.)
+fields:
+  - "Describe the insurance": self_empl_other_insurances[0].source
+    maxlength: 30
+    required: false
+  - "Amount": self_empl_other_insurances[0].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Describe the insurance": self_empl_other_insurances[1].source
+    maxlength: 30
+    required: false
+  - "Amount": self_empl_other_insurances[1].value
+    datatype: currency
+    min: 0
+    required: false
+---
+objects: 
+  - self_empl_debts: ALExpenseList.using(auto_gather = False, gathered = True)
+---
+code: |
+  self_empl_debts[0].source = "Taxes paid"
+  self_empl_debts[0].times_per_year = 12
+---
+code: |
+  self_empl_debts[1].source = "Other interest paid"
+  self_empl_debts[1].times_per_year = 12  
+---
+code: |
+  self_empl_debts[2].source = "Bad debt"
+  self_empl_debts[2].times_per_year = 12
+---
+id: Bad debt taxes and other interest paid
+question: |
+  Monthly business expenses from self-employment
+subquestion: |
+  Bad debt, taxes and other interest paid for your business
+fields:
+  - "Taxes paid": self_empl_debts[0].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Other interest paid": self_empl_debts[1].value
+    datatype: currency
+    min: 0
+    required: false
+  - "Bad debt": self_empl_debts[2].value
+    datatype: currency
+    min: 0
+    required: false
+---
+objects:
+  - self_empl_other_expenses: ALExpenseList
+---
+id: Gather other expenses
+question: |
+  Monthly business expenses from self-employment
+subquestion: |
+  Other expenses for your business
+fields:
+  - "Do you have another business expense to describe?": self_empl_other_expenses.there_are_any
+    datatype: yesnoradio
+    input type: radio
+    choices:
+      - Yes: True
+      - No: False
+---
+id: List of other expenses
+question: |
+  List of other expenses
+subquestion: |
+  We'll create a list of the other business expenses -- one at a time.
+fields:
+  - Describe the expense in a word or two: self_empl_other_expenses[i].source
+    maxlength: 25
+  - How much is the expense each month?: self_empl_other_expenses[i].value
+    datatype: currency
+    min: 0
+---
+id: Another expense
+question: |
+  List of other expenses
+subquestion: |
+  You have told us about these:
+  
+  % for item in self_empl_other_expenses:
+    * ${ item.source }
+  % endfor
+fields:
+  - Are there any other business expenses?: self_empl_other_expenses.there_is_another
+    input type: radio
+    choices:
+      - Yes: True
+      - No: False
+---
+id: Your net income from self employment
+continue button field: net_income
+question: |
+  Net income from self-employment 
+subquestion: |
+
+  We've added up the amounts you entered to figure out your net income from self employment. Tap the Review your answers button to edit any of these amounts.
+  <hr>
+  Monthly amounts:
+
+  - Cost of goods sold: ${ currency(self_empl_cgs.total(times_per_year = 12)) }
+  - Office and equipment expenses:  ${ currency(self_empl_office.total(times_per_year = 12)) }
+  - Wages and other employee expenses: ${ currency(self_empl_employees.total(times_per_year = 12)) }
+  - Auto expenses: ${ currency(self_empl_auto.total(times_per_year = 12)) }
+  - Other common business expenses: ${ currency(self_empl_common_exp.total(times_per_year = 12)) }
+  - Travel and meal expenses: ${ currency(self_empl_travel.total(times_per_year = 12)) }
+  - Insurance (not health insurance) expenses: ${ currency(self_empl_other_insurances.total(times_per_year = 12)) }
+  - Bad debt, taxes and other interest expenses: ${ currency(self_empl_debts.total(times_per_year = 12)) }
+  - Other expenses: ${ currency(self_empl_other_expenses.total(times_per_year = 12)) }
+  
+  **Total expenses each month**: ${ currency(str(self_employed_expenses_monthly_amount)) }
+  <hr>
+  
+  **Gross sales each month**: ${ currency(self_empl_gross_sales_monthly_amount) }
+  <hr>  
+  
+  **Net income each month**: ${ currency(str(self_employed_net_income_monthly_amount)) }
+
+---
+# Adding up all the objects (sub-lists and expenses) that have a .total
+code: |
+  al_expense_lists = [
+    self_empl_cgs,
+    self_empl_office,
+    self_empl_employees,
+    self_empl_auto,
+    self_empl_travel,
+    self_empl_common_exp,
+    self_empl_other_insurances,
+    self_empl_other_expenses,
+    self_empl_debts
+  ]
+---
+# A `template` block is always updated whenever you load or refresh a page, so you don't need `depends on` complications, like requesting every `.value` of every item (which forces undefined items to define themselves, causing all questions to be asked)
+template: self_employed_expenses_monthly_amount
+content: |
+  ${ sum([ expense.total(times_per_year=12) for expense in al_expense_lists ]) }
+---
+template: self_employed_net_income_monthly_amount
+content: |
+  
+  ${ self_empl_gross_sales_monthly_amount - float(str(self_employed_expenses_monthly_amount)) }
+---
+id: preview vtfinaffselfemplpart
+question: |
+  Preview your form before you sign it
+subquestion: |
+  Here is a preview of the form you will sign on the next page.   
+  
+  ${ al_court_bundle.as_pdf(key='preview') }
+
+  Click the image to open it in a new tab. Click the "Edit answers" button
+  to edit your answers.
+
+  ${ action_button_html(url_action('review_vtfinaffselfemplpart'), label='Edit answers', color='info') }
+  
+  Remember to come back to this window to continue and sign your form.
+continue button field: vtfinaffselfemplpart_preview_question    
+---
+code: |
+  signature_fields = []
+---
+code: |
+  # This is a placeholder for the addresses that will be searched
+  # for matching address to court. Edit if court venue is based on 
+  # a different address than the user's
+  #[user.address.address for user in users.complete_elements()]
+  #addresses_to_search = [user.address for user in users.complete_elements()]
+---
+id: vtfinaffselfemplpart review screen
+event: review_vtfinaffselfemplpart
+question: |
+  Review your answers
+review:
+  - note: |
+      ###Self Employment
+  - Edit: self_empl_gross_sales_monthly_amount
+    button: |
+      **Gross sales**:
+      ${ currency(self_empl_gross_sales_monthly_amount) }
+  - Edit: self_empl_cgs[0].value
+    button: |
+      **Cost of goods sold**:
+      ${ currency(self_empl_cgs[0].value) }
+
+  - Edit: self_empl_office[0].value
+    button: |
+      **Office and equipment expenses**:
+      
+      % for item in self_empl_office:
+      * ${ item.source }: ${ currency(item.value) }
+      % endfor
+  - Edit: self_empl_employees[0].value
+    button: |
+      **Employee expenses**:
+      
+      % for item in self_empl_employees:
+      * ${ item.source }: ${ currency(item.value) }
+      % endfor
+  - Edit: self_empl_auto[0].value
+    button: |
+      **Auto expenses**:
+      
+      % for item in self_empl_auto:
+      * ${ item.source }: ${ currency(item.value) }
+      % endfor
+  - Edit: self_empl_travel[0].value
+    button: |
+      **Travel and meal expenses**:
+      
+      % for item in self_empl_travel:
+      * ${ item.source }: ${ currency(item.value) }
+      % endfor
+  - Edit: self_empl_common_exp[0].value
+    button: |
+      **Other common expenses**:
+      
+      % for item in self_empl_common_exp:
+      * ${ item.source }: ${ currency(item.value) }
+      % endfor
+  - Edit: self_empl_other_insurances[0].value
+    button: |
+      **Insurance (not health)**:
+      
+      % for item in self_empl_other_insurances:
+      * ${ item.source }: ${ currency(item.value) }
+      % endfor
+
+  - Edit: self_empl_debts[0].value
+    button: |
+      **Bad debt, taxes and other interest expenses**:
+      
+      % for item in self_empl_debts:
+      * ${ item.source }: ${ currency(item.value) }
+      % endfor
+  - Edit: self_empl_other_expenses[0].value
+    button: |
+      **Other expenses**:
+      
+      % for item in self_empl_other_expenses:
+      * ${ item.source }: ${ currency(item.value) }
+      % endfor 
+---
+id: download vtfinaffselfemplpart
+event: vtfinaffselfemplpart_download
+question: |
+  All done
+subquestion: |
+  
+  Your form is ready to download and deliver.
+  
+  View, download and send your form below. Click the "Edit answers" button to fix any mistakes.
+
+  ${ action_button_html(url_action('review_vtfinaffselfemplpart'), label='Edit answers', color='info') }
+  
+  
+  ${ al_user_bundle.download_list_html() }
+  
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
+
+progress: 100
+---
+# ALDocument objects specify the metadata for each template
+objects:
+  - vtfinaffselfemplpart_attachment: ALDocument.using(title="813A Financial - self-employment worksheet", filename="vtfinaffselfemplpart", enabled=True, has_addendum=False, )
+---
+# Bundles group the ALDocuments into separate downloads, such as for court and for the user
+objects:
+  - al_user_bundle: ALDocumentBundle.using(elements=[vtfinaffselfemplpart_attachment], filename="vtfinaffselfemplpart", title="All forms to download for your records", enabled=True)
+  - al_court_bundle: ALDocumentBundle.using(elements=[vtfinaffselfemplpart_attachment],  filename="vtfinaffselfemplpart", title="All forms to deliver to court", enabled=True)
+---
+attachment:
+  name: vtfinaffselfemplpart
+  filename: vtfinaffselfemplpart
+  variable name: vtfinaffselfemplpart_attachment[i]
+  skip undefined: True
+  pdf template file: a6finaffweaverselfemplpart.pdf
+  fields:
+      - "self_empl_gross_sales_monthly_amount": ${ currency(self_empl_gross_sales_monthly_amount) }
+      - "self_empl_cgs_amount": ${ currency(self_empl_cgs[0].value) }
+      - "self_empl_advertising_amount": ${ currency(self_empl_common_exp[0].value) }
+      - "self_empl_bad_debt_amount": ${ currency(self_empl_debts[2].value) }
+      - "self_empl_auto_gas_amount": ${ currency(self_empl_auto[3].value) }
+      - "self_empl_auto_insur_amount": ${ currency(self_empl_auto[0].value) }
+      - "self_employed_auto_maint_amount": ${ currency(self_empl_auto[1].value) }
+      - "self_empl_auto_reg_amount": ${ currency(self_empl_auto[2].value) }
+      - "self_empl_auto_subtotal_amount": ${ currency(self_empl_auto.total(times_per_year = 12)) }
+      - "self_empl_commiss_amount": ${ currency(self_empl_employees[1].value) }
+      - "self_empl_depletion_amount": ${ currency(self_empl_office[4].value) }
+      - "self_empl_depreciation_amount": ${ currency(self_empl_office[3].value) }
+      - "self_empl_dues_pubs_amount": ${ currency(self_empl_common_exp[1].value) }
+      - "self_empl_employ_ben_prog_amount": ${ currency(self_empl_employees[2].value) }
+      - "self_empl_insur_not_health1_amount": ${ currency(self_empl_other_insurances[0].value) }
+      - "self_empl_insur_not_health1_descr": ${ self_empl_other_insurances[0].source }
+      - "self_empl_insur_not_health2_descr": ${ self_empl_other_insurances[1].source }
+      - "self_empl_insur_not_health2_amount": ${ currency(self_empl_other_insurances[1].value) }
+      - "self_empl_interest_paid_mort_amount": ${ currency(self_empl_office[1].value) }
+      - "self_empl_other_interest_paid_amount": ${ currency(self_empl_debts[1].value) }
+      - "self_empl_legal_prof_amount": ${ currency(self_empl_common_exp[2].value) }     
+      - "self_empl_office_exp_amount": ${ currency(self_empl_office[8].value) }
+      - "self_emp_cleaning_amount": ${ currency(self_empl_common_exp[3].value) }
+      - "self_empl_pension_amount": ${ currency(self_empl_employees[3].value) }
+      - "self_empl_rent_amount": ${ currency(self_empl_office[0].value) }
+      - "self_empl_equip_amount": ${ currency(self_empl_office[2].value) }
+      - "self_empl_other_property_amount": ${ currency(self_empl_office[5].value) }
+      - "self_empl_repairs_amount": ${ currency(self_empl_office[6].value) }
+      - "self_empl_supplies_amount": ${ currency(self_empl_office[9].value) }
+      - "self_empl_taxes_amount": ${ currency(self_empl_debts[0].value) }
+      - "self_empl_travel_amount": ${ currency( self_empl_travel[0].value) }
+      - "self_empl_meals_amount": ${ currency(self_empl_travel[1].value) }
+      - "self_empl_utilities_amount": ${ currency(self_empl_office[7].value) }
+      - "self_empl_wages_paid_amount": ${ currency(self_empl_employees[0].value) }
+      - "self_empl_other_exp1_descr": ${ currency(self_empl_other_expenses[0].source) }
+      - "self_empl_other_exp1_amount": ${ currency(self_empl_other_expenses[0].value) }
+      - "self_empl_other_exp2_descr": ${ currency(self_empl_other_expenses[1].source) }
+      - "self_empl_other_exp2_amount": ${ currency(self_empl_other_expenses[1].value) }
+      - "self_empl_other_exp3_descr": ${ currency(self_empl_other_expenses[2].source) }
+      - "self_empl_other_exp3_amount": ${ currency(self_empl_other_expenses[2].value) }
+      - "self_empl_other_exp4_descr": ${ currency(self_empl_other_expenses[3].source) }
+      - "self_empl_other_exp4_amount": ${ currency(self_empl_other_expenses[3].value) }
+      - "self_empl_other_exp5_amount": ${ currency(self_empl_other_expenses[4].value) }
+      - "self_empl_other_exp5_descr": ${ currency(self_empl_other_expenses[4].source) }
+      - "self_empl_other_exp6_descr": ${ currency(self_empl_other_expenses[5].source) }
+      - "self_empl_other_exp6_amount": ${ currency(self_empl_other_expenses[5].value) }
+      - "self_empl_other_exp7_descr": ${ currency(self_empl_other_expenses[6].source) }
+      - "self_empl_other_exp7_amount": ${ currency(self_empl_other_expenses[6].value) }
+      - "self_empl_other_exp1_subtotal_amount": ${ currency(self_empl_other_expenses.total(times_per_year = 12)) }
+        
+      - "self_employed_expenses_monthly_amount": ${ currency(sum([ expense.total(times_per_year=12) for expense in al_expense_lists ])) }
+      - "self_employed_net_income_monthly_amount": ${ currency(self_empl_gross_sales_monthly_amount - float(sum([ expense.total(times_per_year=12) for expense in al_expense_lists ]))) }
+
+
+

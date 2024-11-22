@@ -35,17 +35,17 @@ metadata:
   al_weaver_version: "1.7.0"
   generated on: "2022-08-19"
   title: >-
-    Fee Waiver
+    Financial Affidavit 813A
   short title: >-
-    Fee waiver
+    Form 813A
   description: |-
-    Fee waiver for Vermont courts. Based on Vermont Judiciary paper form 600-00228 (7/2024).
+    Financial Affidavit 813A for Vermont family courts. Based on Vermont Judiciary paper form 400-813A (6/2023).
   original_form: >-
-    https://www.vermontjudiciary.org/media/47
+    https://www.vermontjudiciary.org/media/886
   help_page_url: >-
-    https://www.vermontjudiciary.org/self-help/application-waive-filing-fees-and-service-costs
+    https://vtlawhelp.org/cfp/fill-out-form-813a-financial-affidavit-income-and-expenses
   help_page_title: >-
-    Application to Waive Filing Fees and Service Costs on the Vermont Judiciary website
+    Fill Out Form 813A - Financial Affidavit: Income and Expenses
   authors:
     - VTCourtForms guided interview by Legal Services Vermont / VTLawHelp.org website
     - Authored by Legal Services Vermont
@@ -71,7 +71,7 @@ code: |
 id: correct last-updated date
 #this will correct the last-updated date that gets shown on About This Form page
 code: |
-  res = github_modified_date(github_user, "docassemble-VTFeeWaiver")
+  res = github_modified_date(github_user, "docassemble-VT813")
   if res:
     package_updated_on = res.format('yyyy-MM-dd')
   else:
@@ -79,7 +79,7 @@ code: |
 ---
 id: interview_short_title
 code: |
-  interview_short_title = "Ask to waive court filing and service fees in Vermont"
+  interview_short_title = "Fill out family court form 813A"
 ---
 id: existing_case
 code: |
@@ -116,7 +116,7 @@ code: |
   nav.set_section('intro')
   set_progress(5)
 
-  VT_fee_waiver_intro
+  VT_813A_intro
   important_notes_to_user
   
   nav.set_section('about_you')
@@ -1249,13 +1249,13 @@ subquestion: |
 
   <p>${ intro_vtcourtforms_3_steps }</p>
   
-  <i class="fas fa-file-text fa-2x"></i> This guided interview will produce a completed Application to Waive Filing Fees and Service Costs for Vermont courts -- form 600-00228. If approved by the Vermont Judiciary, you will not have to pay the court to start a court action.
+  <i class="fas fa-file-text fa-2x"></i> This guided interview will produce a completed Financial Affidavit form 400-813A for Vermont courts. It is used in family court cases.
   
-    <i class="fas fa-clock fa-2x"></i>  It may take you between 10 and 40 minutes to complete this interview. If you want, you can create an account and save your work to return to later.
+    <i class="fas fa-clock fa-2x"></i>  It may take you between 45 minutes and 2 hours to complete this. There are a lot of questions. If you want, you can create an account and save your work to return to later.
 
-  <i class="fas fa-circle-info fa-2x"></i> It is free to use this program. This site is not a lawyer.
+  <i class="fas fa-circle-info fa-2x"></i> It is free to use this tool. This site is not a lawyer.
   
-  Visit the [VTLawHelp.org website](https://vtlawhelp.org) for information about civil legal issues.
+  Visit the [VTLawHelp.org website](https://vtlawhelp.org) for information about family legal issues and procedures.
 
   <p>${ intro_vtcourtforms_created_by }</p>
 
@@ -1272,7 +1272,7 @@ fields:
 continue button field: al_intro_screen
 ---
 id: VT 813 intro
-continue button field: VT_fee_waiver_intro
+continue button field: VT_813A_intro
 question: |
   Is this interview right for you?
 subquestion: |

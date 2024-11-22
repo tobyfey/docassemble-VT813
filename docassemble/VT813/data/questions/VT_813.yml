@@ -1477,6 +1477,7 @@ subquestion: |
 id: household_expenses.terms_ordered
 variable name: household_expenses.terms_ordered
 data: !!omap
+  - rent: "Rent"
   - property_tax: "Property taxes"
   - home_insurance: "Homeowners' or Renter's Insurance"
   - electric: "Electricity"
@@ -1509,6 +1510,10 @@ question: |
   What kind of household expenses do you have?
 subquestion: |
   Be sure to look back over the last 12 months. Maybe you didn't have the expense last month, but you had it earlier in the year.
+  
+  % if primary_residence_loans.total_monthly_payment > 0:
+  You said that your total monthly expenses for paying for loans on your primary residence is ${ currency(primary_residence_loans.total_monthly_payment) }.  This amount will be entered into the worksheet.
+  % endif
 fields:
   - no label: household_expenses.selected_types
     datatype: checkboxes
@@ -2258,12 +2263,23 @@ code: |
 id: want to add more primary_residence_loans
 question: Do you want to list any more primary residence loans?
 subquestion: |
+  
+  The total for the monthly expenses you pay is ${ currency(primary_residence_loans.total_monthly_payment) }
+  
   Tap Next if you don't have more to add.
   
   ${ primary_residence_loans_table }
   
   ${ primary_residence_loans.add_action() }
 continue button field: primary_residence_loans.review_items
+---
+generic object: ALIncomeList
+code: |
+  temp_total = 0
+  for item in x:
+    if item.self_payment:
+      temp_total += item.monthly_payment
+  x.total_monthly_payment = temp_total
 ---
 id: primary_residence_loans.revisit
 continue button field: primary_residence_loans.revisit

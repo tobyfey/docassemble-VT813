@@ -146,8 +146,8 @@ code: |
   docket_number
   
   #This is where we collect the desired court division and county. With those two pieces of info and our comprehensive courts_list_full spreadsheet, the exact court is determined.
-  #user_selected_county
-  #trial_court.address.county
+  user_selected_county
+  trial_court.address.county
   
   
   nav.set_section('your_income')

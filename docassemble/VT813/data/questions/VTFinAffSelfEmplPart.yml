@@ -6,7 +6,6 @@
 include:
   - docassemble.AssemblyLine:assembly_line.yml
   - docassemble.ALToolbox:al_income.yml
-  - docassemble.ALAnyState:any_state.yml
   - docassemble.VTSharedYMLFile:VTSharedYMLFile.yml
 ---
 features:

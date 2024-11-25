@@ -35,17 +35,17 @@ metadata:
   al_weaver_version: "1.7.0"
   generated on: "2022-08-19"
   title: >-
-    Fee Waiver
+    Financial Affidavit 813A
   short title: >-
-    Fee waiver
+    Form 813A
   description: |-
-    Fee waiver for Vermont courts. Based on Vermont Judiciary paper form 600-00228 (7/2024).
+    Financial Affidavit 813A for Vermont family courts. Based on Vermont Judiciary paper form 400-813A (6/2023).
   original_form: >-
-    https://www.vermontjudiciary.org/media/47
+    https://www.vermontjudiciary.org/media/886
   help_page_url: >-
-    https://www.vermontjudiciary.org/self-help/application-waive-filing-fees-and-service-costs
+    https://vtlawhelp.org/cfp/fill-out-form-813a-financial-affidavit-income-and-expenses
   help_page_title: >-
-    Application to Waive Filing Fees and Service Costs on the Vermont Judiciary website
+    Fill Out Form 813A - Financial Affidavit: Income and Expenses
   authors:
     - VTCourtForms guided interview by Legal Services Vermont / VTLawHelp.org website
     - Authored by Legal Services Vermont
@@ -71,7 +71,7 @@ code: |
 id: correct last-updated date
 #this will correct the last-updated date that gets shown on About This Form page
 code: |
-  res = github_modified_date(github_user, "docassemble-VTFeeWaiver")
+  res = github_modified_date(github_user, "docassemble-VT813")
   if res:
     package_updated_on = res.format('yyyy-MM-dd')
   else:
@@ -79,7 +79,7 @@ code: |
 ---
 id: interview_short_title
 code: |
-  interview_short_title = "Ask to waive court filing and service fees in Vermont"
+  interview_short_title = "Fill out family court form 813A"
 ---
 id: existing_case
 code: |
@@ -116,7 +116,7 @@ code: |
   nav.set_section('intro')
   set_progress(5)
 
-  VT_fee_waiver_intro
+  VT_813A_intro
   important_notes_to_user
   
   nav.set_section('about_you')
@@ -276,7 +276,7 @@ sets:
   - other_parties[0].name.suffix
 id: names of opposing parties
 question: |
-  Name of other party
+  Name of the other party
 fields:
   - code: |
       other_parties[0].name_fields(person_or_business='person')
@@ -305,9 +305,9 @@ code: |
   other_children[i].complete = True
 ---
 id: are there shared children
-question: Minor Children with the ${ other_parties[0].name.full() }
+question: Minor children with ${ other_parties[0].name.full() }
 fields:
-  - Do you have Minor Children with ${ other_parties[0].name.full() }?: shared_children.there_are_any
+  - Do you have minor children with ${ other_parties[0].name.full() }?: shared_children.there_are_any
     datatype: yesnoradio
 ---
 id: shared children
@@ -1249,16 +1249,67 @@ subquestion: |
 
   <p>${ intro_vtcourtforms_3_steps }</p>
   
-  <i class="fas fa-file-text fa-2x"></i> This guided interview will produce a completed Application to Waive Filing Fees and Service Costs for Vermont courts -- form 600-00228. If approved by the Vermont Judiciary, you will not have to pay the court to start a court action.
+  <i class="fas fa-file-text fa-2x"></i> This guided interview will produce a completed Financial Affidavit form 400-813A for Vermont courts. It is used in family court cases.
   
-    <i class="fas fa-clock fa-2x"></i>  It may take you between 10 and 40 minutes to complete this interview. If you want, you can create an account and save your work to return to later.
+    <i class="fas fa-clock fa-2x"></i>  It may take you between 45 minutes and 2 hours to complete this. There are a lot of questions. If you want, you can create an account and save your work to return to later.
 
-  <i class="fas fa-circle-info fa-2x"></i> It is free to use this program. This site is not a lawyer.
+  <i class="fas fa-circle-info fa-2x"></i> It is free to use this tool. This site is not a lawyer.
   
-  Visit the [VTLawHelp.org website](https://vtlawhelp.org) for information about civil legal issues.
+  Visit the [VTLawHelp.org website](https://vtlawhelp.org) for information about family legal issues and procedures.
 
   <p>${ intro_vtcourtforms_created_by }</p>
+    
+continue button field: al_intro_screen
+---
+id: VT 813 intro
+continue button field: VT_813A_intro
+question: |
+  Is this interview right for you?
+subquestion: |
+  <h4>Do you need to fill out financial form 813A?</h4>
 
+  There are a lot of questions on the 813A form. Be sure you really need to fill it out. It will take quite some time to describe all your income and expenses. This tool will help you work through it.
+
+  You need to complete and file the 813A if:
+  
+  - You are a party in a newly filed divorce, civil union dissolution, legal separation, annulment or parentage action and you and the other party have minor children; OR
+  
+  - You or the other party are seeking to change a previously issued order for child support or spousal maintenance (alimony); OR
+  
+  - You are required to pay support and an enforcement action has been filed against you; OR
+  
+  - Your child is in the custody of the Department of Children and Families and support has been requested of you; OR
+  
+  - You are ordered by the court to complete and file this form or the other party requests that you fill out the form as part of a court case.
+
+  If you aren't sure if you should fill it out, call the court.
+  
+  <h4>What you will need to know</h4>
+  
+  You will need to know:
+  
+  * birthdates of you, the other party and any children
+  * any disability or Social Security income received by your kids
+  * information about your court case like a docket number (You can find this information on other court papers you have about this case.)
+  * any public assistance that you get (like 3SquaresVT food help, ReachUp help for families, SSDI, etc.)
+  * the name and address of any employer you might have
+  * your income -- If you work or get unemployment, have those paystubs on hand. If you get child support, have that information on hand. If you are self-employed, have your IRS Schedule C on hand or your business income and expenses. If you earn rental income, have the income amount and expenses on hand.
+  * taxes taken out of your paycheck
+  * if you work, you will need to know the costs of one-person, two-person and family health insurance offered by your employer -- whether you enroll in that insurance or not (Ask the human resources folks.)
+  * all your expenses (including rent, utilities, insurance payments, child care, medical costs, car expenses, clothes, insurance, other child expenses, etc.)
+  * loan payments for cars/trucks, your home or other real estate, credit card debt payments and any other loan payments.
+
+---
+id: important_notes_to_user
+question: |
+  Important
+subquestion: |  
+  <h4>Deadline for filing</h4>
+  
+  This form must be filed with the court before or at your first case manager's conference. If no conference is scheduled it must be filed at least 7 days before your first scheduled court hearing.
+
+    <h4>Our terms of use</h4>
+  
 fields:
   - To continue, please accept our [terms of use](https://vtlawhelp.org/vtcourtforms/terms-of-use).: acknowledged_information_use
     datatype: checkboxes
@@ -1268,48 +1319,7 @@ fields:
       - I accept the terms of use.
     validation messages:
       minlength: |
-        You cannot continue unless you agree to the terms of use.        
-continue button field: al_intro_screen
----
-id: VT 813 intro
-continue button field: VT_fee_waiver_intro
-question: |
-  Is this interview right for you?
-subquestion: |
-  <h4>Do you need this financial form 813A?</h4>
-
-  INSTRUCTIONS: You are required to complete and file the 813A if-
-  
-  1. You are a party in a newly filed divorce, civil union dissolution, legal separation, annulment or parentage action and you and the other party have minor children; OR
-  
-  2. You or the other party are seeking to modify a previously issued order regarding child support or spousal maintenance (alimony); OR
-  
-  3. You are the person required to pay support, and an enforcement action has been filed against you; OR
-  
-  4. Your child is in the custody of the Department of Children and Families and support has been requested of you; OR
-  
-  5. You are ordered by the Court to complete and file this form or the other party requests that you fill out the form as part of thediscovery process
-  
-  
-  <h4>What you will need to complete this form</h4>
-  
-  For this guided interview, you will need to know:
-  
-  * the name and address of any employer you might have
-  * any public assistance that you get (like 3SquaresVT food help, ReachUp help for families, SSDI, etc.), and
-  * information about the court case for which you want a fee waiver. (You can find this information on other court papers you have about this case. If you are starting a court action -- like filing for divorce -- you won't have a case number or docket number yet.)
-  * your income -- If you work or get unemployment, have those paystubs on hand. If you get child support, have that information on hand. If you are self-employed, have your IRS Schedule C on hand or have your income and business expenses from the last 12 months.
-  * your expenses (like rent, utilities, insurance payments, child care, etc.) -- looking back over the last 12 months
-  * the amount of money you have in the bank and on hand
-  * the value of your vehicle/car, real estate/home, and any other major things you might own, and
-  * if filling out form on behalf of a minor or incompetent adult, you need that person’s information.
-
----
-id: important_notes_to_user
-question: |
-  Important
-subquestion: |  
-  DEADLINE FOR FILING: This form must be filed with the court before or at your first case manager's conference. If no conference is scheduled it must be filed at least seven (7) days before your first scheduled court hearing.
+        You cannot continue unless you agree to the terms of use.
 continue button field: important_notes_to_user
 ---
 id: paystub instructions

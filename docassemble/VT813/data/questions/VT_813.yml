@@ -126,6 +126,7 @@ code: |
   users[0].address.address
   users[0].daytime_phone_number
   users[0].email
+  users[0].birthdate
   
   nav.set_section('other_party')
   set_progress(15)
@@ -400,6 +401,7 @@ question: ${ ordinal(i) } Child whom you provide support
 fields:
   - Name: other_children[i].name.first
   - Date of Birth: other_children[i].birthdate
+    datatype: BirthDate
   - Address: other_children[i].address
   - Are you ordered to pay child support for this child?: other_children[i].child_support
     datatype: yesnoradio
@@ -597,8 +599,10 @@ data: !!omap
   - interest: "Interest or Dividend Income"
   - trust: "Trust or Annuity Income"
   - gift: "Gifts or Prize Money (include lottery winnings)"
-  - alimony: "Spousal Maintenance (Alimony) from the other party in this action)"
-  - alimony other: "Spousal Maintenance (Alimony) from a person not a party in this action)"
+  - alimony: |
+      Spousal Maintenance (Alimony) from ${ other_parties[0].name_full() }
+  - alimony other: |
+      Spousal Maintenance (Alimony) from a person other than ${ other_parties[0].name_full() }
   - other: "Other"
 ---
 variable name: help_text
@@ -1414,12 +1418,16 @@ fields:
   - Daytime phone number: users[0].daytime_phone_number
     datatype: al_international_phone
     required: False
+  - Evening phone number: users[0].evening_phone_number
+    datatype: al_international_phone
+    required: False
   - Email address: users[0].email    
     datatype: email
     required: False
 
 validation code: |
   if (not showifdef('users[0].daytime_phone_number') and \
+      (not showifdef('users[0].evening_phone_number')) and \
       (not showifdef('users[0].email')) and \
       (not showifdef('users[0].other_contact_method'))):
     validation_error(word("You need to provide at least one contact method."), field="users[0].other_contact_method")
@@ -1907,7 +1915,8 @@ data: !!omap
   - dues: "Union Dues"
   - save: "Monthly Contribution to Savings"
   - contributions: "Monthly Contribution to Retirement Funds (401K, IRA, etc.)"
-  - other_kids: "Expenses for Children living with you but not of this relationship"
+  - other_kids: |
+      Expenses for Children living with you but not of the relationship with ${ other_parties[0].name_full() }
   - child_support: "Court Ordered Child Support you pay for children of another relationship."
   - alimony: "Court Ordered Spousal Maintenance (Alimony) you pay"
   - other: "Miscellaneous"
@@ -2060,7 +2069,8 @@ data: !!omap
   - kids_camp: "Summer Camp"
   - kids_tuition: "Private School Tuition"
   - kids_medical: "Uninsured Medical/Dental Expenses"
-  - kids_childsupport: "Child Support you pay for your children of this relationship"
+  - kids_childsupport: |
+      Child Support you pay for children you share with ${ other_parties[0].name_full() }
   - kids_other: "Miscellaneous"
 
 --- 
@@ -2190,7 +2200,8 @@ edit:
   - source
   - value
 ---
-question: YOUR CHILD CARE COSTS FOR CHILDREN WITH ${ other_parties[0].name.full() }
+id: childcare costs
+question: Your Child Care Costs For Children With ${ other_parties[0].name.full() }
 subquestion: |
   If monthly amounts change during the year, use total annual amount divided by 12.
 fields:
@@ -2199,6 +2210,7 @@ fields:
   - Subsidy: childcare_subsidy
     datatype: currency
 ---
+id: extraordinatry expenses
 question: Your Extraordinary Expenses For Children With ${ other_parties[0].name.full() }
 fields:
   - note: |

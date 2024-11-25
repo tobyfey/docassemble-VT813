@@ -54,7 +54,7 @@ setup(name='docassemble.VT813',
       url='https://VTLawHelp.org/VTCourtForms',
       packages=find_packages(),
       namespace_packages=['docassemble'],
-      install_requires=['docassemble.ALToolbox>=0.11.1', 'docassemble.AssemblyLine>=3.2.0', 'docassemble.GithubFeedbackForm>=0.4.1.1', 'docassemble.VTFeedback', 'docassemble.VTSharedYMLFile'],
+      install_requires=['docassemble.ALToolbox>=0.11.1', 'docassemble.AssemblyLine>=3.2.0', 'docassemble.GithubFeedbackForm>=0.4.0', 'docassemble.VTFeedback', 'docassemble.VTSharedYMLFile'],
       zip_safe=False,
       package_data=find_package_data(where='docassemble/VT813/', package='docassemble.VT813'),
      )

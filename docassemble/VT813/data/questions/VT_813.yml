@@ -126,6 +126,7 @@ code: |
   users[0].address.address
   users[0].daytime_phone_number
   users[0].email
+  users[0].birthdate
   
   nav.set_section('other_party')
   set_progress(15)
@@ -400,6 +401,7 @@ question: ${ ordinal(i) } Child whom you provide support
 fields:
   - Name: other_children[i].name.first
   - Date of Birth: other_children[i].birthdate
+    datatype: BirthDate
   - Address: other_children[i].address
   - Are you ordered to pay child support for this child?: other_children[i].child_support
     datatype: yesnoradio
@@ -597,8 +599,10 @@ data: !!omap
   - interest: "Interest or Dividend Income"
   - trust: "Trust or Annuity Income"
   - gift: "Gifts or Prize Money (include lottery winnings)"
-  - alimony: "Spousal Maintenance (Alimony) from the other party in this action)"
-  - alimony other: "Spousal Maintenance (Alimony) from a person not a party in this action)"
+  - alimony: |
+      Spousal Maintenance (Alimony) from ${ other_parties[0].name_full() }
+  - alimony other: |
+      Spousal Maintenance (Alimony) from a person other than ${ other_parties[0].name_full() }
   - other: "Other"
 ---
 variable name: help_text
@@ -1414,12 +1418,16 @@ fields:
   - Daytime phone number: users[0].daytime_phone_number
     datatype: al_international_phone
     required: False
+  - Evening phone number: users[0].evening_phone_number
+    datatype: al_international_phone
+    required: False
   - Email address: users[0].email    
     datatype: email
     required: False
 
 validation code: |
   if (not showifdef('users[0].daytime_phone_number') and \
+      (not showifdef('users[0].evening_phone_number')) and \
       (not showifdef('users[0].email')) and \
       (not showifdef('users[0].other_contact_method'))):
     validation_error(word("You need to provide at least one contact method."), field="users[0].other_contact_method")
@@ -1522,7 +1530,7 @@ subquestion: |
   Be sure to look back over the last 12 months. Maybe you didn't have the expense last month, but you had it earlier in the year.
   
   % if primary_residence_loans.total_monthly_payment > 0:
-  You said that your total monthly expenses for paying for loans on your primary residence is ${ currency(primary_residence_loans.total_monthly_payment) }.  This amount will be entered into the worksheet.
+  You said that your total monthly expenses for paying for loans on your primary residence is **${ currency(primary_residence_loans.total_monthly_payment) }**.  This amount will be entered into the worksheet.
   % endif
 fields:
   - no label: household_expenses.selected_types
@@ -1655,7 +1663,11 @@ objects:
 id: vehicle expenses types
 question: |
   What kind of vehicle expenses do you have?
-subquestion: |
+subquestion: | 
+  % if vehicle_loans.total_monthly_payment > 0:
+  You said that your total monthly expenses for paying for loans on your vehicles is **${ currency(vehicle_loans.total_monthly_payment) }**.  This amount will be entered into the worksheet.
+  % endif
+
   Be sure to look back over the last 12 months. Maybe you didn't have the expense last month, but you had it earlier in the year.
 fields:
   - no label: vehicle_expenses.selected_types
@@ -1903,7 +1915,8 @@ data: !!omap
   - dues: "Union Dues"
   - save: "Monthly Contribution to Savings"
   - contributions: "Monthly Contribution to Retirement Funds (401K, IRA, etc.)"
-  - other_kids: "Expenses for Children living with you but not of this relationship"
+  - other_kids: |
+      Expenses for Children living with you but not of the relationship with ${ other_parties[0].name_full() }
   - child_support: "Court Ordered Child Support you pay for children of another relationship."
   - alimony: "Court Ordered Spousal Maintenance (Alimony) you pay"
   - other: "Miscellaneous"
@@ -1921,11 +1934,29 @@ id: personal_expenses_ordered object
 objects:
   - personal_expenses_ordered: DAOrderedDict.using(elements=personal_expenses.terms_ordered, auto_gather=False, gathered=True)
 ---
+code: |
+  monthly_debt_payment = real_estate_loans.total_monthly_payment + other_loans.total_monthly_payment + other_debt.total_monthly_payment
+depends on:
+  - real_estate_loans.total_monthly_payment
+  - other_loans.total_monthly_payment
+  - other_debt.total_monthly_payment
+---
 #expenses
 id: personal expenses types
 question: |
   What kind of personal expenses do you have?
 subquestion: |
+  You said that you make these monthly debt payments:
+  
+    - Other real estate loans: **${ currency(real_estate_loans.total_monthly_payment) }**
+    - Other loans: **${ currency(other_loans.total_monthly_payment) }**
+    - Other debt: **${ currency(other_debt.total_monthly_payment) }**
+   
+   For a total of **${ currency(monthly_debt_payment) }**
+    
+  
+  This amount will be entered into the worksheet.
+
   Be sure to look back over the last 12 months. Maybe you didn't have the expense last month, but you had it earlier in the year.
 fields:
   - no label: personal_expenses.selected_types
@@ -2038,7 +2069,8 @@ data: !!omap
   - kids_camp: "Summer Camp"
   - kids_tuition: "Private School Tuition"
   - kids_medical: "Uninsured Medical/Dental Expenses"
-  - kids_childsupport: "Child Support you pay for your children of this relationship"
+  - kids_childsupport: |
+      Child Support you pay for children you share with ${ other_parties[0].name_full() }
   - kids_other: "Miscellaneous"
 
 --- 
@@ -2050,6 +2082,13 @@ code: |
 id: children_expenses object
 objects:
   - children_expenses: ALExpenseList.using(complete_attribute='complete',there_is_another=False)
+---
+generic object: ALExpenseList
+code: |
+  temp_total = 0
+  for item in x:
+    temp_total += float(item.paid_by_you_monthly)
+  x.total_monthly_payment = temp_total
 ---
 id: children_expenses_ordered object
 objects:
@@ -2100,7 +2139,7 @@ validation code: |
 id: children expense paid by others question
 question:  ${ children_expenses[i].source }
 subquestion: |
-  You said your ${ children_expenses[i].source } expense is ${ children_expenses[i].total(times_per_year=12) }
+  You said your ${ children_expenses[i].source } expense is currency(${ children_expenses[i].total(times_per_year=12) })
 fields: 
   - How much does somebody else pay for that expense per month?: children_expenses[i].paid_by_other_monthly
     datatype: currency
@@ -2127,6 +2166,8 @@ code: |
 id: want to add more expenses
 question: Do you want to list any more children expenses?
 subquestion: |
+  The total for the monthly expenses you pay is **${ currency(children_expenses.total_monthly_payment) }**
+
   Tap Next if you don't have more to add.
   
   ${ children_expenses_table }
@@ -2159,7 +2200,8 @@ edit:
   - source
   - value
 ---
-question: YOUR CHILD CARE COSTS FOR CHILDREN WITH ${ other_parties[0].name.full() }
+id: childcare costs
+question: Your Child Care Costs For Children With ${ other_parties[0].name.full() }
 subquestion: |
   If monthly amounts change during the year, use total annual amount divided by 12.
 fields:
@@ -2168,6 +2210,7 @@ fields:
   - Subsidy: childcare_subsidy
     datatype: currency
 ---
+id: extraordinatry expenses
 question: Your Extraordinary Expenses For Children With ${ other_parties[0].name.full() }
 fields:
   - note: |
@@ -2274,7 +2317,7 @@ id: want to add more primary_residence_loans
 question: Do you want to list any more primary residence loans?
 subquestion: |
   
-  The total for the monthly expenses you pay is ${ currency(primary_residence_loans.total_monthly_payment) }
+  The total for the monthly expenses you pay is **${ currency(primary_residence_loans.total_monthly_payment) }**
   
   Tap Next if you don't have more to add.
   
@@ -2399,6 +2442,9 @@ code: |
 id: want to add more other_loans
 question: Do you want to list any other loans?
 subquestion: |
+  
+  The total for the monthly expenses you pay is **${ currency(other_loans.total_monthly_payment) }**
+  
   Tap Next if you don't have more to add.
   
   ${ other_loans_table }
@@ -2471,6 +2517,8 @@ fields:
 id: want to add more real_estate_loans
 question: Do you want to list any more real estate loans?
 subquestion: |
+  The total for the monthly expenses you pay is **${ currency(real_estate_loans.total_monthly_payment) }**
+  
   Tap Next if you don't have more to add.
   
   ${ real_estate_loans_table }
@@ -2541,6 +2589,8 @@ fields:
 id: want to add more vehicle loans
 question: Do you want to list any more vehicle loans?
 subquestion: |
+  The total for the monthly expenses you pay is **${ currency(vehicle_loans.total_monthly_payment) }**
+  
   Tap Next if you don't have more to add.
   
   ${ vehicle_loans_table }
@@ -2612,7 +2662,9 @@ fields:
 ---
 id: want to add more credit_card_debt
 question: Do you want to list any more credit card debt?
-subquestion:  
+subquestion:  |
+  The total for the monthly expenses you pay is **${ currency(credit_card_debt.total_monthly_payment) }**
+  
   Tap Next if you don't have more to add.
   
   ${ credit_card_debt_table }
@@ -2684,7 +2736,9 @@ fields:
 ---
 id: want to add more other debt
 question: Do you want to list any other debt?
-subquestion:  
+subquestion: |
+  The total for the monthly expenses you pay is **${ currency(other_debt.total_monthly_payment) }**
+  
   Tap Next if you don't have more to add.
   
   ${ other_debt_table }

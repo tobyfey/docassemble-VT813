@@ -910,7 +910,8 @@ fields:
     show if:
       variable: x.is_self_employed
       is: False
-  - Street address: x.employer.address.address
+  - Street address: x.employer.address.address 
+    address autocomplete: True
     show if:
       variable: x.is_self_employed
       is: False
@@ -1020,8 +1021,9 @@ fields:
     datatype: yesnoradio
   - note: |
       ---
+      Look at a recent pay stub for the following information
       
-      Withholding Information
+      Withholding information on your pay stub (monthly, weekly, every two weeks, etc.)
   - Federal: jobs[i].deductions_federal_monthly_amount
     datatype: currency
     required: False
@@ -1039,7 +1041,9 @@ fields:
     required: False
   - Does the employer pay any personal expenses?: jobs[i].pay_personal_expenses
     datatype: yesnoradio
-  - How much does your employed pay in personal expenses?: jobs[i].to_add['expenses'].value
+  - note: |
+      Examples might be: cell phone, car expenses, housing allowance, meals or military allowances. 
+  - How much does your employer pay in personal expenses?: jobs[i].to_add['expenses'].value
     datatype: currency
     show if: jobs[i].pay_personal_expenses
   - How often  are you paid this?: jobs[i].to_add['expenses'].times_per_year
@@ -1051,11 +1055,12 @@ fields:
   - Does the job have other incomes, like tips, commissions or bonuses?: jobs[i].to_add.there_is_another
     datatype: yesnoradio
 ---
----
 question: Healthcare benefits
 fields:
-  - Could you get insurance through this job (even if your children are not enrolled)?: jobs[i].healthcare_available
+  - Could you get insurance through this job -- even if you choose not to enroll yourself or your children?: jobs[i].healthcare_available
     datatype: yesnoradio
+  - note: |
+      Ask the human resources department at your job to find answers to these questions. You need to fill in all the prices even if you don't have kids and even if you don't use your employer's health insurance.
   - Total Monthly Family Health Insurance Cost to Employee: jobs[i].health_insurance_family_cost
     datatype: currency
     show if: jobs[i].healthcare_available
@@ -1065,10 +1070,17 @@ fields:
   - Total Monthly Cost for Single Person Coverave to Employee: jobs[i].health_insurance_single_person_cost
     datatype: currency
     show if: jobs[i].healthcare_available
+  - Are you enrolled in your employer's insurance?: jobs[i].enrolled
+    datatype: yesnoradio
+    show if: jobs[i].healthcare_available
   - Are your kids enrolled?: jobs[i].kids_enrolled
     datatype: yesnoradio
     show if: jobs[i].healthcare_available
-
+  - How much do you pay for the healthcare during each pay period?: jobs[i].health_insurance_paid
+    show if: jobs[i].enrolled
+  - How much does your employer pay during each pay period?: jobs[i].health_insurance_paid_by_employer
+    show if: jobs[i].enrolled
+  
 ---
 id: sets default attributes if personal expenses arent paid
 if: not jobs[i].pay_personal_expenses

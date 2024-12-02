@@ -541,6 +541,7 @@ data: !!omap
   - Housing Assist.: "Housing Assistance (subsidy/voucher/Section 8)"  
   - Dr Dynasaur: "Dr. Dynasaur"
   - Medicaid: "Medicaid"
+  - Medicare: "Medicare"
   - other: "Other"
 ---
 id: public_benefits other display
@@ -616,13 +617,22 @@ fields:
     default: 12
     code: |
       times_per_year_list
+    js hide if: |
+      val("public_benefits[i].source") === "Medicaid" || val("public_benefits[i].source") === "Medicare" || val("public_benefits[i].source") === "Dr Dynasaur"
   - Amount of income: public_benefits[i].value
     datatype: currency
+    js hide if: |
+      val("public_benefits[i].source") === "Medicaid" || val("public_benefits[i].source") === "Medicare" || val("public_benefits[i].source") === "Dr Dynasaur"
 validation code: |
   if public_benefits[i].source != "other":
     public_benefits[i].display_name = public_benefits.terms_ordered.get(public_benefits[i].source, public_benefits[i].source)
   else:
     public_benefits[i].display_name = public_benefits[i].source_other
+---
+if: public_benefits[i].source in ["Medicaid","Medicare","Dr Dynasaur"]
+code: |
+  public_benefits[i].value = 0
+  public_benefits[i].times_per_year = 0
 ---
 id: public_benefits set display name
 code: |

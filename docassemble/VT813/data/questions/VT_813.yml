@@ -295,6 +295,19 @@ objects:
 objects:
   - shared_children[i].income: ALIncomeList.using(complete_attribute='complete',there_is_another=False)
 ---
+id: address_choices object
+objects:
+  - address_choices: DAList.using(auto_gather=False)
+---
+id: address_choices code to add users address
+code: |
+  address_choices.clear()
+
+  address_choices.append(users[0].address)
+  if len(users.complete_elements()) > 1 and defined('users[1].address') and users[1].address.normalize() != users[0].address.normalize:
+    address_choices.append(users[1].address)
+  address_choices.gathered = True
+---
 id: shared children complete
 code: |
   shared_children[i].income.gather()
@@ -312,22 +325,53 @@ fields:
     datatype: yesnoradio
 ---
 id: shared children
-question: ${ ordinal(i) } Child with ${ other_parties[0].name.full() }
+question: ${ title_case(ordinal(i)) } Child with ${ other_parties[0].name.full() }
 fields:
   - Name: shared_children[i].name
   - Date of Birth: shared_children[i].birthdate
     datatype: BirthDate
-  - Address: shared_children[i].address
+  - Previously entered address: shared_children[i].address
+    datatype: object_radio
+    choices: address_choices
+    none of the above: A different address
+    default: users[0].address
+    disable others:
+      - shared_children[i].address.address
+      - shared_children[i].address.unit
+      - shared_children[i].address.city
+      - shared_children[i].address.state
+      - shared_children[i].address.zip
+  - Street address: shared_children[i].address.address
+    required: False
+    address autocomplete: True
+  - Apartment: shared_children[i].address.unit
+    required: False
+  - City: shared_children[i].address.city
+    required: False
+  - State: shared_children[i].address.state
+    required: False
+    code: states_list()
+  - Zip: shared_children[i].address.zip
+    required: False
   - Are you ordered to pay child support for this child?: shared_children[i].child_support
     datatype: yesnoradio
-  - Amount Ordered: shared_children[i].child_support_amount
+  - Amount you are ordered to pay each month for this child: shared_children[i].child_support_amount
     datatype: currency
     show if: shared_children[i].child_support
-  - Amount Paid: shared_children[i].child_support_paid
+  - note: |
+      If you pay one amount for more than one child, you can divide that total amount by the number of children.
+    show if: shared_children[i].child_support
+  - Amount you currently pay each month for this child: shared_children[i].child_support_paid
     datatype: currency
     show if: shared_children[i].child_support
-  - State/County of Order: shared_children[i].child_support_state
+  - State of Order: shared_children[i].child_support_state
     show if: shared_children[i].child_support
+    code: states_list()
+  - County of Order:  shared_children[i].child_support_county
+    code: sorted(all_courts.unique_column_values('branch'))
+    show if:
+      variable: shared_children[i].child_support_state
+      is: "VT"
   - Does this child receive any income?: shared_children[i].income.selected_types
     datatype: checkboxes
     code: |
@@ -373,6 +417,10 @@ fields:
   - Amount of income: shared_children[i].income[j].value
     datatype: currency
   - Name of Parent who receives the child's benefit: shared_children[i].income[j].parent
+    datatype: radio
+    choices:
+      - ${ users[0].name }
+      - ${ other_parties[0].name }
 validation code: |
   if shared_children[i].income[j].source != "other":
     shared_children[i].income[j].display_name = shared_children[i].income.terms_ordered.get(shared_children[i].income[j].source, shared_children[i].income[j].source)
@@ -397,22 +445,53 @@ code: |
   shared_children_income_other_display = "another source of income"
 ---
 id: other children
-question: ${ ordinal(i) } Child whom you provide support
+question: ${ title_case(ordinal(i)) } Child whom you provide support
 fields:
   - Name: other_children[i].name.first
   - Date of Birth: other_children[i].birthdate
     datatype: BirthDate
-  - Address: other_children[i].address
+  - Previously entered address: other_children[i].address
+    datatype: object_radio
+    choices: address_choices
+    none of the above: A different address
+    default: users[0].address
+    disable others:
+      - other_children[i].address.address
+      - other_children[i].address.unit
+      - other_children[i].address.city
+      - other_children[i].address.state
+      - other_children[i].address.zip
+  - Street address: other_children[i].address.address
+    required: False
+    address autocomplete: True
+  - Apartment: other_children[i].address.unit
+    required: False
+  - City: other_children[i].address.city
+    required: False
+  - State: other_children[i].address.state
+    required: False
+    code: states_list()
+  - Zip: other_children[i].address.zip
+    required: False
   - Are you ordered to pay child support for this child?: other_children[i].child_support
     datatype: yesnoradio
-  - Amount Ordered: other_children[i].child_support_amount
+  - Amount you are ordered to pay each month for this child: other_children[i].child_support_amount
     datatype: currency
     show if: other_children[i].child_support
-  - Amount Paid: other_children[i].child_support_paid
+  - note: |
+      If you pay one amount for more than one child, you can divide that total amount by the number of children.
+    show if: other_children[i].child_support
+  - Amount you currently pay each month for this child: other_children[i].child_support_paid
     datatype: currency
     show if: other_children[i].child_support
-  - State/County of Order: other_children[i].child_support_state
+  - State of Order: other_children[i].child_support_state
     show if: other_children[i].child_support
+    code: states_list()
+  - County of Order:  other_children[i].child_support_county
+    code: sorted(all_courts.unique_column_values('branch'))
+    show if:
+      variable: other_children[i].child_support_state
+      is: "VT"
   - Add another child?: other_children.there_is_another
     datatype: yesnoradio
 ---

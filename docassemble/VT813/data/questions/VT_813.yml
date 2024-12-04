@@ -158,9 +158,8 @@ code: |
   set_progress(42)
   if len(jobs) > 0:
     review_jobs
-
-  set_progress(44)    
-  paystub_instructions
+    set_progress(44)    
+    paystub_instructions
   
   set_progress(48)
   if len(other_incomes) > 0:
@@ -213,6 +212,7 @@ code: |
   if len(vehicle_expenses) > 0:
     vehicle_expenses.review_items
   set_progress(77)
+  preload_insurance_expenses
   if len(insurance_expenses) > 0:
     insurance_expenses.review_items
   set_progress(78)
@@ -669,7 +669,7 @@ columns:
   - Source: |
       row_item.display_name if defined("row_item.source") else ""
   - Public assistance per month: |
-      currency(row_item.total(times_per_year=12))
+      "Varies" if row_item.source in ["Medicaid", "Medicare", "Dr Dynasaur"] else currency(row_item.total(times_per_year=12))
 edit:
   - source
   - value
@@ -853,8 +853,15 @@ fields:
 id: sets self employment income to net_income from form
 if: j in ["self employed"]
 code: |
-  net_income_order
-  jobs[i].to_add[j].value = net_income
+  if has_schedule_c:
+    jobs[i].to_add[j].value = self_employed_net_income
+    jobs[i].to_add[j].times_per_year = 1
+  elif do_self_employment_worksheet:
+    jobs[i].to_add[j].value = net_income_order
+    jobs[i].to_add[j].times_per_year = 12
+  else:
+    jobs[i].to_add[j].value = 0
+    jobs[i].to_add[j].times_per_year = 12
 ---
 id: sets self employed times_per_year to monthly
 if: j in ["self employed"]
@@ -1078,8 +1085,10 @@ fields:
     show if: jobs[i].healthcare_available
   - How much do you pay for the healthcare during each pay period?: jobs[i].health_insurance_paid
     show if: jobs[i].enrolled
+    datatype: currency
   - How much does your employer pay during each pay period?: jobs[i].health_insurance_paid_by_employer
     show if: jobs[i].enrolled
+    datatype: currency
   
 ---
 id: sets default attributes if personal expenses arent paid
@@ -1431,7 +1440,13 @@ id: paystub instructions
 question: |
   Important
 subquestion: |
-   You will need to attach 4 paystubs to this form when you give it to the court. You will need to attach Sched C if you used that for any self-employment income.
+  Keep in mind
+
+  If you got paychecks in the last 12 months, you will need to attach copies of the 4 most recent paystubs to this form.
+
+  If you had self-employed income, you will need to attach a copy of your most recent IRS Schedule C -- only if you filed one.
+
+  We'll remind you about this at the end in the Next Steps document.
 continue button field: paystub_instructions
 ---
 ############################### ABOUT COURT CASE ###############################
@@ -1674,23 +1689,28 @@ validation code: |
     household_expenses[i].display_name = household_expenses.terms_ordered.get(household_expenses[i].source, household_expenses[i].source)
   else:
     household_expenses[i].display_name = household_expenses[i].source_other
+  if household_expenses[i].paid_by_other == False:
+    household_expenses[i].paid_by_other_monthly = 0
+  else:
+    if defined('household_expenses[i].paid_by_other_monthly') and household_expenses[i].paid_by_other_monthly <= household_expenses[i].total(times_per_year=12):
+      household_expenses[i].paid_by_other_monthly_default = household_expenses[i].paid_by_other_monthly
+    else:
+      household_expenses[i].paid_by_other_monthly_default = 0
+    invalidate('household_expenses[i].paid_by_other_monthly')
 ---
-question:  ${ household_expenses[i].source }
+id: household expenses paid by others
+question:  Other Payments for ${ household_expenses[i].display_name }
 subquestion: |
-  You said your ${ household_expenses[i].source } expense is ${ household_expenses[i].total(times_per_year=12) }
+  You said your ${ household_expenses[i].display_name } expense is ${ currency(household_expenses[i].total(times_per_year=12)) }
 fields: 
   - How much does somebody else pay for that expense per month?: household_expenses[i].paid_by_other_monthly
     datatype: currency
+    min: 0
+    max: ${ household_expenses[i].total(times_per_year=12) }
+    default: ${ household_expenses[i].paid_by_other_monthly_default }
 ---
-id: calculates paid by you if household expenses are also paid by others
 code: |
-  household_expenses[i].paid_by_you_monthly = float(household_expenses[i].total(times_per_year=12)) - household_expenses[i].paid_by_other_monthly
----
-id: sets paid by you if expenses are not paid by others
-if: household_expenses[i].paid_by_other == False
-code: |
-  household_expenses[i].paid_by_you_monthly = household_expenses[i].total(times_per_year=12)
-  household_expenses[i].paid_by_other_monthly = 0
+  household_expenses[i].paid_by_other_monthly_default = 0
 ---
 id: sets display name for household expense
 code: |
@@ -1727,7 +1747,7 @@ columns:
   - Type: |
       row_item.display_name
   - Amount paid by you: |
-      currency(row_item.paid_by_you_monthly)
+      currency(float(row_item.total(times_per_year=12)) - row_item.paid_by_other_monthly)
   - Amount paid by somebody else: |
       currency(row_item.paid_by_other_monthly)
   - Total: |
@@ -1805,24 +1825,26 @@ validation code: |
     vehicle_expenses[i].display_name = vehicle_expenses.terms_ordered.get(vehicle_expenses[i].source, vehicle_expenses[i].source)
   else:
     vehicle_expenses[i].display_name = vehicle_expenses[i].source_other
+  if vehicle_expenses[i].paid_by_other == False:
+    vehicle_expenses[i].paid_by_other_monthly = 0
+  else:
+    if defined('vehicle_expenses[i].paid_by_other_monthly') and vehicle_expenses[i].paid_by_other_monthly <= vehicle_expenses[i].total(times_per_year=12):
+      vehicle_expenses[i].paid_by_other_monthly_default = vehicle_expenses[i].paid_by_other_monthly
+    else:
+      vehicle_expenses[i].paid_by_other_monthly_default = 0
+    invalidate('vehicle_expenses[i].paid_by_other_monthly')
 ---
 id: vehicle expenses paid by others
-question:  ${ vehicle_expenses[i].source }
+question:  Other Payments for ${ vehicle_expenses[i].display_name }
 subquestion: |
-  You said your ${ vehicle_expenses[i].source } expense is ${ vehicle_expenses[i].total(times_per_year=12) }
+  You said your ${ vehicle_expenses[i].display_name } expense is ${ currency(vehicle_expenses[i].total(times_per_year=12)) }
 fields: 
   - How much does somebody else pay for that expense per month?: vehicle_expenses[i].paid_by_other_monthly
     datatype: currency
----
-id: calculates paid by you if vehicle expenses are also paid by others
-code: |
-  vehicle_expenses[i].paid_by_you_monthly = float(vehicle_expenses[i].total(times_per_year=12)) - vehicle_expenses[i].paid_by_other_monthly
----
-id: sets paid by you if vehicle expenses are not paid by others
-if: vehicle_expenses[i].paid_by_other == False
-code: |
-  vehicle_expenses[i].paid_by_you_monthly = vehicle_expenses[i].total(times_per_year=12)
-  vehicle_expenses[i].paid_by_other_monthly = 0
+    min: 0
+    max: ${ vehicle_expenses[i].total(times_per_year=12) }
+    default: ${ vehicle_expenses[i].paid_by_other_monthly_default }
+
 ---
 id: vehicle expense display name
 code: |
@@ -1859,7 +1881,7 @@ columns:
   - Type: |
       row_item.display_name
   - Amount paid by you: |
-      currency(row_item.paid_by_you_monthly)
+      currency(float(row_item.total(times_per_year=12)) - row_item.paid_by_other_monthly)
   - Amount paid by somebody else: |
       currency(row_item.paid_by_other_monthly)
   - Total: |
@@ -1892,6 +1914,16 @@ id: insurance_expenses_ordered object
 objects:
   - insurance_expenses_ordered: DAOrderedDict.using(elements=insurance_expenses.terms_ordered, auto_gather=False, gathered=True)
 ---
+id: preload health insurance to expenses
+code: |
+  health_insurance_paid_total = 0
+  health_insurance_paid_by_employer_total = 0
+  for job in employer_jobs:
+    if job.healthcare_available and job.enrolled:
+      health_insurance_paid_total += job.health_insurance_paid
+      health_insurance_paid_by_employer_total += job.health_insurance_paid_by_employer
+  preload_insurance_expenses = True
+---
 #expenses
 id: insurance expenses types
 question: |
@@ -1903,6 +1935,8 @@ fields:
     datatype: checkboxes
     code: |
       insurance_expenses_ordered
+    default:
+      insur_health: health_insurance_paid_total > 0 or health_insurance_paid_by_employer_total > 0
 ---
 id: insurance expense information
 reconsider: insurance_expenses[i].display_name
@@ -1933,24 +1967,38 @@ validation code: |
     insurance_expenses[i].display_name = insurance_expenses.terms_ordered.get(insurance_expenses[i].source, insurance_expenses[i].source)
   else:
     insurance_expenses[i].display_name = insurance_expenses[i].source_other
+  if insurance_expenses[i].paid_by_other == False:
+    insurance_expenses[i].paid_by_other_monthly = 0
+  else:
+    if defined('insurance_expenses[i].paid_by_other_monthly') and insurance_expenses[i].paid_by_other_monthly <= insurance_expenses[i].total(times_per_year=12):
+      insurance_expenses[i].paid_by_other_monthly_default = insurance_expenses[i].paid_by_other_monthly
+    else:
+      insurance_expenses[i].paid_by_other_monthly_default = 0
+    invalidate('insurance_expenses[i].paid_by_other_monthly')
+---
+if: insurance_expenses[i].source == "insur_health"
+code: |
+  insurance_expenses[i].times_per_year = 12
+  if health_insurance_paid_by_employer_total > 0:
+    insurance_expenses[i].paid_by_other = True
+    insurance_expenses[i].paid_by_other_monthly = health_insurance_paid_by_employer_total
+    insurance_expenses[i].value = health_insurance_paid_total + health_insurance_paid_by_employer_total
+  else:
+    insurance_expenses[i].value = health_insurance_paid_total  
 ---
 id: insurance expense paid by other question
-question:  ${ insurance_expenses[i].source }
+question:  Other Payments for ${ insurance_expenses[i].display_name }
 subquestion: |
-  You said your ${ insurance_expenses[i].source } expense is ${ insurance_expenses[i].total(times_per_year=12) }
+  You said your ${ insurance_expenses[i].display_name } expense is ${ insurance_expenses[i].total(times_per_year=12) } per month.
 fields: 
   - How much does somebody else pay for that expense per month?: insurance_expenses[i].paid_by_other_monthly
     datatype: currency
+    min: 0
+    max: ${ insurance_expenses[i].total(times_per_year=12) }
+    default: ${ insurance_expenses[i].paid_by_other_monthly_default }
 ---
-id: calculates paid by you if insurance expenses are also paid by others
 code: |
-  insurance_expenses[i].paid_by_you_monthly = float(insurance_expenses[i].total(times_per_year=12)) - insurance_expenses[i].paid_by_other_monthly
----
-id: sets paid by you if insurance expenses are not paid by others
-if: insurance_expenses[i].paid_by_other == False
-code: |
-  insurance_expenses[i].paid_by_you_monthly = insurance_expenses[i].total(times_per_year=12)
-  insurance_expenses[i].paid_by_other_monthly = 0
+  insurance_expenses[i].paid_by_other_monthly_default = 0
 ---
 id: insurance expense display name
 code: |
@@ -1987,7 +2035,7 @@ columns:
   - Type: |
       row_item.display_name
   - Amount paid by you: |
-      currency(row_item.paid_by_you_monthly)
+      currency(float(row_item.total(times_per_year=12)) - row_item.paid_by_other_monthly)
   - Amount paid by somebody else: |
       currency(row_item.paid_by_other_monthly)
   - Total: |
@@ -2094,24 +2142,28 @@ validation code: |
     personal_expenses[i].display_name = personal_expenses.terms_ordered.get(personal_expenses[i].source, personal_expenses[i].source)
   else:
     personal_expenses[i].display_name = personal_expenses[i].source_other
+  if personal_expenses[i].paid_by_other == False:
+    personal_expenses[i].paid_by_other_monthly = 0
+  else:
+    if defined('personal_expenses[i].paid_by_other_monthly') and personal_expenses[i].paid_by_other_monthly <= personal_expenses[i].total(times_per_year=12):
+      personal_expenses[i].paid_by_other_monthly_default = personal_expenses[i].paid_by_other_monthly
+    else:
+      personal_expenses[i].paid_by_other_monthly_default = 0
+    invalidate('personal_expenses[i].paid_by_other_monthly')
 ---
 id: personal expenses paid by others question
-question:  ${ personal_expenses[i].source }
+question:  Other Payments for ${ personal_expenses[i].display_name }
 subquestion: |
   You said your ${ personal_expenses[i].source } expense is ${ personal_expenses[i].total(times_per_year=12) }
 fields: 
   - How much does somebody else pay for that expense per month?: personal_expenses[i].paid_by_other_monthly
     datatype: currency
+    min: 0
+    max: ${ personal_expenses[i].total(times_per_year=12) }
+    default: ${ personal_expenses[i].paid_by_other_monthly_default }
 ---
-id: calculates paid by you if personal expenses are also paid by others
 code: |
-  personal_expenses[i].paid_by_you_monthly = float(personal_expenses[i].total(times_per_year=12)) - personal_expenses[i].paid_by_other_monthly
----
-id: sets paid by you if personal expenses are not paid by others
-if: personal_expenses[i].paid_by_other == False
-code: |
-  personal_expenses[i].paid_by_you_monthly = personal_expenses[i].total(times_per_year=12)
-  personal_expenses[i].paid_by_other_monthly = 0
+  personal_expenses[i].paid_by_other_monthly_default = 0
 ---
 id: personal expenses display
 code: |
@@ -2148,7 +2200,7 @@ columns:
   - Type: |
       row_item.display_name
   - Amount paid by you: |
-      currency(row_item.paid_by_you_monthly)
+      currency(float(row_item.total(times_per_year=12)) - row_item.paid_by_other_monthly)
   - Amount paid by somebody else: |
       currency(row_item.paid_by_other_monthly)
   - Total: |
@@ -2188,7 +2240,7 @@ generic object: ALExpenseList
 code: |
   temp_total = 0
   for item in x:
-    temp_total += float(item.paid_by_you_monthly)
+    temp_total += float(item.total(times_per_year=12) - item.paid_by_other_monthly_default)
   x.total_monthly_payment = temp_total
 ---
 id: children_expenses_ordered object
@@ -2236,24 +2288,29 @@ validation code: |
     children_expenses[i].display_name = children_expenses.terms_ordered.get(children_expenses[i].source, children_expenses[i].source)
   else:
     children_expenses[i].display_name = children_expenses[i].source_other
+  if children_expenses[i].paid_by_other == False:
+    children_expenses[i].paid_by_other_monthly = 0
+  else:
+    if defined('children_expenses[i].paid_by_other_monthly') and children_expenses[i].paid_by_other_monthly <= children_expenses[i].total(times_per_year=12):
+      children_expenses[i].paid_by_other_monthly_default = children_expenses[i].paid_by_other_monthly
+    else:
+      children_expenses[i].paid_by_other_monthly_default = 0
+    invalidate('children_expenses[i].paid_by_other_monthly')
 ---
 id: children expense paid by others question
-question:  ${ children_expenses[i].source }
+question:  ${ children_expenses[i].display_name }
 subquestion: |
-  You said your ${ children_expenses[i].source } expense is currency(${ children_expenses[i].total(times_per_year=12) })
+  You said your ${ children_expenses[i].display_name } expense is ${ currency(children_expenses[i].total(times_per_year=12)) }
 fields: 
   - How much does somebody else pay for that expense per month?: children_expenses[i].paid_by_other_monthly
     datatype: currency
+    min: 0
+    max: ${ children_expenses[i].total(times_per_year=12) }
+    default: ${ children_expenses[i].paid_by_other_monthly_default }
+
 ---
-id: calculates paid by you if children expenses are also paid by others
 code: |
-  children_expenses[i].paid_by_you_monthly = float(children_expenses[i].total(times_per_year=12)) - children_expenses[i].paid_by_other_monthly
----
-id: set paid by you if children expenses are not paid by others
-if: children_expenses[i].paid_by_other == False
-code: |
-  children_expenses[i].paid_by_you_monthly = children_expenses[i].total(times_per_year=12)
-  children_expenses[i].paid_by_other_monthly = 0
+  children_expenses[i].paid_by_other_monthly_default = 0
 ---
 id: children expense display name
 code: |
@@ -2292,7 +2349,7 @@ columns:
   - Type: |
       row_item.display_name
   - Amount paid by you: |
-      currency(row_item.paid_by_you_monthly)
+      currency(float(row_item.total(times_per_year=12)) - row_item.paid_by_other_monthly)
   - Amount paid by somebody else: |
       currency(row_item.paid_by_other_monthly)
   - Total: |

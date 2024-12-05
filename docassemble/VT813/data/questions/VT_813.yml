@@ -926,6 +926,22 @@ fields:
   - City: x.employer.address.city
   - State: x.employer.address.state
   - Zip or postal code: x.employer.address.zip
+
+---
+id: name of one itemized job in list
+generic object: ALItemizedJobList
+question: |
+  What is your job title for your ${ordinal(i)} job?
+subquestion: |
+  % if is_self_employed and len(x.complete_elements()) > 0:
+  You've already told us about your self-employed income and being a ${ comma_and_list([job.source for job in x.complete_elements()]) }.
+  % elif is_self_employed:
+  You've already told us about your self-employed income 
+  % elif len(x.complete_elements()) > 0:
+  You've already told us about being a ${ comma_and_list([job.source for job in x.complete_elements()]) }.
+  % endif
+fields:
+  - Job title: x[i].source
 ---
 id: other itemized job income value
 generic object: ALItemizedJob

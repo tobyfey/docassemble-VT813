@@ -156,19 +156,23 @@ code: |
   if len(public_benefits) > 0:
     public_benefits.review_items
   set_progress(42)
-  if len(jobs) > 0:
-    review_jobs
-    set_progress(44)    
-    paystub_instructions
+
+  if employed:
+    if is_self_employed:
+      if has_schedule_c:
+        self_employed_net_income
+      elif do_self_employment_worksheet:
+        net_income_order
+    if len(jobs) > 0:
+      review_jobs
+      set_progress(44)    
+      paystub_instructions
   
   set_progress(48)
   if len(other_incomes) > 0:
     other_incomes.review_items
   
-  employer_jobs
-  self_employed_jobs
-  employer_jobs_review_table
-  self_employed_jobs_review_table
+
   
   nav.set_section('your_loans')
   set_progress(50)
@@ -826,6 +830,15 @@ fields:
   - "Do you get income from working?": employed
     datatype: yesnoradio
 ---
+id: how many itemized jobs
+question: |
+  How many jobs do you have?
+fields:
+  - How many jobs do you have?: jobs.target_number
+    datatype: integer
+  - Do you receive self-employed income?: is_self_employed
+    datatype: yesnoradio
+---
 id: sets jobs.target_number
 code: |
   if not employed:
@@ -851,24 +864,6 @@ fields:
   - Your monthly net income: jobs[i].to_add[j].value
     datatype: currency
 ---
-id: sets self employment income to net_income from form
-if: j in ["self employed"]
-code: |
-  if has_schedule_c:
-    jobs[i].to_add[j].value = self_employed_net_income
-    jobs[i].to_add[j].times_per_year = 1
-  elif do_self_employment_worksheet:
-    jobs[i].to_add[j].value = net_income_order
-    jobs[i].to_add[j].times_per_year = 12
-  else:
-    jobs[i].to_add[j].value = 0
-    jobs[i].to_add[j].times_per_year = 12
----
-id: sets self employed times_per_year to monthly
-if: j in ["self employed"]
-code: |
-  jobs[i].to_add[j].times_per_year = 12
----
 id: sets times_per_year to monthly (which shouldnt be used)
 code: |
   jobs[i].times_per_year = 12
@@ -877,17 +872,16 @@ id: job complete
 generic object: ALItemizedJob
 code: |
   x.source
-  x.wages_added
+  x.employer.name.first
   x.to_add.gather()
-  if x.is_self_employed:
-    x.times_per_year
-    # for fee waiver form we are not collecting items to subtract from wages
-    # x.to_subtract.gather()
-  else:
-    if not x.is_self_employed:
-      x.employer.name.first
-      x.healthcare_available    
+  x.healthcare_available    
   x.complete = True
+---
+id: job at least one wage
+generic object: ALItemizedJob
+code: |
+  x.to_add.there_are_any = True
+
 ---
 id: job itemized value complete
 generic object: ALItemizedValueDict
@@ -903,58 +897,20 @@ generic object: ALItemizedJob
 question: |
   Tell us who employs you as a ${ x.source }
 fields:
-  - I am self-employed: x.is_self_employed
-    datatype: yesno
   - Is this a part time job: x.is_part_time
     datatype: yesnoradio
   - Employer's name: x.employer.name.first
-    show if:
-      variable: x.is_self_employed
-      is: False
   - note: |
       ---
 
       Employer's contact information
-    show if:
-      variable: x.is_self_employed
-      is: False
   - Street address: x.employer.address.address 
     address autocomplete: True
-    show if:
-      variable: x.is_self_employed
-      is: False
   - Unit: x.employer.address.unit
     required: False
-    show if:
-      variable: x.is_self_employed
-      is: False
   - City: x.employer.address.city
-    show if:
-      variable: x.is_self_employed
-      is: False
   - State: x.employer.address.state
-    show if:
-      variable: x.is_self_employed
-      is: False
   - Zip or postal code: x.employer.address.zip
-    show if:
-      variable: x.is_self_employed
-      is: False
----
-id: sets attributes based on self employed and part time
-generic object: ALItemizedJob
-code: |
-  if x.is_self_employed:
-    x.to_add.there_are_any = True
-    x.to_add.new_item_name = "self employed"
-    x.to_add.there_is_another = False
-  elif x.is_part_time:
-    x.to_add.there_are_any = True
-    x.to_add.new_item_name = "part time"
-  else:
-    x.to_add.there_are_any = True
-    x.to_add.new_item_name = "full time"
-  x.wages_added = True
 ---
 id: other itemized job income value
 generic object: ALItemizedJob
@@ -1153,6 +1109,16 @@ validation code: |
     validation_error(f'You already told us about your <strong>{job_items_names.get(x.to_add.new_item_name, x.to_add.new_item_name) }</strong> that pays { currency( x.to_add[ x.to_add.new_item_name ].value )}. Pick a different name.')
 
 ---
+if: not x.to_add.complete_elements()
+id: job at least one wage
+generic object: ALItemizedJob
+code: |
+  if x.is_part_time:
+    x.to_add.new_item_name = "part time"
+  else:
+    x.to_add.new_item_name = "part time"
+  
+---
 id: edit wages and other incomes from a job
 generic object: ALItemizedJob
 continue button field: x.to_add.revisit
@@ -1196,9 +1162,6 @@ edit:
   - times_per_year
   - value
 ---
-reconsider:
-  - employer_jobs
-  - self_employed_jobs
 id: job review
 question: |
   Review your jobs
@@ -1213,21 +1176,18 @@ subquestion: |
   
   Monthly total for wages: **${ currency(jobs.total(source=["part time", "full time"],times_per_year=12)) }**
   
-  Monthly total for self-employed work: **${ currency(jobs.total(source=["self employed"],times_per_year=12)) }**
+  Monthly total for self-employed work: 
+  % if not is_self_employed:
+  **$0**
+  % elif has_schedule_c:
+  **${ currency(self_employed_net_income) }**  
+  % else:
+  **${ currency(net_income_order) }**
+  % endif
 
 
 
 field: review_jobs
----
-id: employer jobs code
-depends on: jobs
-code: |
-  employer_jobs = jobs.filter(is_self_employed=False)
----
-id: self employed jobs code
-depends on: jobs
-code: |
-  self_employed_jobs = jobs.filter(is_self_employed=True)
 ---
 id: jobs_table
 table: jobs_table
@@ -1244,92 +1204,6 @@ edit:
   - revisit
 
 confirm: True
----
-id: employer_jobs_review_table
-reconsider: employer_jobs
-table: employer_jobs_review_table
-rows: employer_jobs
-columns:
-  - Job: |
-      row_item.source
-edit:
-  - revisit
-
-confirm: True
----
-id: self_employed_jobs_table
-reconsider: self_employed_jobs
-table: self_employed_jobs_table
-rows: self_employed_jobs
-columns:
-  - Job: |
-      row_item.source
-  - Monthly gross income: |
-      currency(row_item.gross_total(times_per_year=12)) if len(public_benefits) == 0 else "Not needed"
-
-edit:
-  - value
-
-confirm: True
----
-id: self_employed_jobs_review_table
-reconsider: self_employed_jobs
-table: self_employed_jobs_review_table
-rows: self_employed_jobs
-columns:
-  - Self-employed job: |
-      row_item.source
-
-edit:
-  - value
-
-confirm: True
----
-only sets: x.revisit
-id: review job
-generic object: ALItemizedJob
-question: Review ${ x.source } job
-fields:
-  - Job: x.source
-  - I am self-employed: x.is_self_employed
-    datatype: yesno
-  - Employer's name: x.employer.name.first
-    show if:
-      variable: x.is_self_employed
-      is: False
-  - note: |
-      ---
-
-      Employer's contact information
-    show if:
-      variable: x.is_self_employed
-      is: False
-  - Street address: x.employer.address.address
-    show if:
-      variable: x.is_self_employed
-      is: False
-  - Unit: x.employer.address.unit
-    required: False
-    show if:
-      variable: x.is_self_employed
-      is: False
-  - City: x.employer.address.city
-    show if:
-      variable: x.is_self_employed
-      is: False
-  - State: x.employer.address.state
-    show if:
-      variable: x.is_self_employed
-      is: False
-  - Zip or postal code: x.employer.address.zip
-    show if:
-      variable: x.is_self_employed
-      is: False
-under: |
-  ${ x.to_add.table }
-
-  ${ x.to_add.add_action() }  
-continue button field: x.revisit
 ---
 id: wages table
 generic object: ALItemizedValueDict
@@ -1936,7 +1810,7 @@ id: preload health insurance to expenses
 code: |
   health_insurance_paid_total = 0
   health_insurance_paid_by_employer_total = 0
-  for job in employer_jobs:
+  for job in jobs:
     if job.healthcare_available and job.enrolled:
       health_insurance_paid_total += job.health_insurance_paid
       health_insurance_paid_by_employer_total += job.health_insurance_paid_by_employer
@@ -3126,19 +3000,18 @@ review:
       % else:
 
       % for item in jobs:
-      % if not item.is_self_employed:
       
       - ${ item.source }
-      % endif
+      
       % endfor
       
       **Self employed jobs**
-      % for item in jobs:
-      % if item.is_self_employed:
+
+      % if is_self_employed:
       
-      - ${ item.source }
+
       % endif
-      % endfor
+
       % endif
 
   - Edit: 
@@ -3380,7 +3253,7 @@ attachments:
       - "employed_no": ${ not employed }
       
       - "users1_employer_0_name": |
-          % if len(jobs) > 0 and jobs[0].is_self_employed:
+          % if len(jobs) > 0:
             Self-employed
           % elif len(jobs) > 0:
             ${ jobs[0].employer }
@@ -3393,7 +3266,7 @@ attachments:
           % endif
 
       - "users1_employer_1_name": |
-          % if len(jobs) > 1 and jobs[1].is_self_employed:
+          % if len(jobs) > 1:
             Self-employed
           % elif len(jobs) > 1:
             ${ jobs[1].employer }

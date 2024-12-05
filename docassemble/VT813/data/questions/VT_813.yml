@@ -200,6 +200,7 @@ code: |
   
   if shared_children.there_are_any:
     if len(children_expenses) > 0:
+      total_monthly_childcare_costs
       children_expenses.review_items
     set_progress(72)
     total_monthly_childcare_costs
@@ -1611,7 +1612,7 @@ subquestion: |
 id: household_expenses.terms_ordered
 variable name: household_expenses.terms_ordered
 data: !!omap
-  - rent: "Rent"
+  - rent: "Rent or Mortgage"
   - property_tax: "Property taxes"
   - home_insurance: "Homeowners' or Renter's Insurance"
   - electric: "Electricity"
@@ -1653,6 +1654,8 @@ fields:
     datatype: checkboxes
     code: |
       household_expenses_ordered
+    default:
+      rent: primary_residence_loans.total_monthly_payment > 0
 ---
 id: ALExpense complete
 generic object: ALExpense
@@ -1697,6 +1700,11 @@ validation code: |
     else:
       household_expenses[i].paid_by_other_monthly_default = 0
     invalidate('household_expenses[i].paid_by_other_monthly')
+---
+if: household_expenses[i].source == 'rent' and primary_residence_loans.total_monthly_payment  > 0
+code: |
+  household_expenses[i].value = primary_residence_loans.total_monthly_payment
+  household_expenses[i].times_per_year = 12   
 ---
 id: household expenses paid by others
 question:  Other Payments for ${ household_expenses[i].display_name }
@@ -1761,6 +1769,7 @@ id: vehicle_expenses.terms_ordered
 # their order here will be their same order when shown to users.
 variable name: vehicle_expenses.terms_ordered
 data: !!omap
+  - auto_loans: "Total Vehicle Loans"
   - auto_insur: "Car Insurance"
   - auto_gas: "Gas"
   - auto_maint: "Maintenance/Repairs"
@@ -1795,6 +1804,9 @@ fields:
     datatype: checkboxes
     code: |
       vehicle_expenses_ordered
+    default:
+      code: |
+        {'auto_loans': vehicle_loans.total_monthly_payment > 0}
 ---
 id: vehicle expense information
 reconsider: vehicle_expenses[i].display_name
@@ -1834,6 +1846,11 @@ validation code: |
       vehicle_expenses[i].paid_by_other_monthly_default = 0
     invalidate('vehicle_expenses[i].paid_by_other_monthly')
 ---
+if: vehicle_expenses[i].source == 'auto_loans' and vehicle_loans.total_monthly_payment > 0
+code: |
+  vehicle_expenses[i].value = vehicle_loans.total_monthly_payment
+  vehicle_expenses[i].times_per_year = 12  
+---
 id: vehicle expenses paid by others
 question:  Other Payments for ${ vehicle_expenses[i].display_name }
 subquestion: |
@@ -1861,6 +1878,7 @@ subquestion: |
   Tap Next if you don't have more to add.
   
   ${ vehicle_expenses_table }
+  **Total vehicle expenses:** ${ currency(vehicle_expenses.total(times_per_year=12)) }
   
   ${ vehicle_expenses.add_action() }
 continue button field: vehicle_expenses.review_items
@@ -2064,6 +2082,7 @@ data: !!omap
   - dues: "Union Dues"
   - save: "Monthly Contribution to Savings"
   - contributions: "Monthly Contribution to Retirement Funds (401K, IRA, etc.)"
+  - loans: "Monthly Loan & Debt Payments"
   - other_kids: |
       Expenses for Children living with you but not of the relationship with ${ other_parties[0].name_full() }
   - child_support: "Court Ordered Child Support you pay for children of another relationship."
@@ -2095,6 +2114,7 @@ id: personal expenses types
 question: |
   What kind of personal expenses do you have?
 subquestion: |
+  % if monthly_debt_payment > 0:
   You said that you make these monthly debt payments:
   
     - Other real estate loans: **${ currency(real_estate_loans.total_monthly_payment) }**
@@ -2103,15 +2123,18 @@ subquestion: |
    
    For a total of **${ currency(monthly_debt_payment) }**
     
-  
-  This amount will be entered into the worksheet.
+  "Monthly Loan & Debt Payments" is selected below and this amount will be entered into the worksheet.
 
+  % endif
   Be sure to look back over the last 12 months. Maybe you didn't have the expense last month, but you had it earlier in the year.
 fields:
   - no label: personal_expenses.selected_types
     datatype: checkboxes
     code: |
       personal_expenses_ordered
+    default:
+      code: |
+        {'loans': monthly_debt_payment > 0}
 ---
 id: personal expense information
 reconsider: personal_expenses[i].display_name
@@ -2151,6 +2174,11 @@ validation code: |
       personal_expenses[i].paid_by_other_monthly_default = 0
     invalidate('personal_expenses[i].paid_by_other_monthly')
 ---
+if: personal_expenses[i].source == 'loans' and monthly_debt_payment > 0
+code: |
+  personal_expenses[i].value = monthly_debt_payment
+  personal_expenses[i].times_per_year = 12   
+---
 id: personal expenses paid by others question
 question:  Other Payments for ${ personal_expenses[i].display_name }
 subquestion: |
@@ -2181,6 +2209,8 @@ subquestion: |
   
   ${ personal_expenses_table }
   
+  **Total personal expenses:** ${ currency(personal_expenses.total(times_per_year=12)) }
+  
   ${ personal_expenses.add_action() }
 continue button field: personal_expenses.review_items
 ---
@@ -2190,6 +2220,7 @@ question: |
   Edit expenses
 subquestion: |
   ${ personal_expenses_table }
+  
 
   ${ personal_expenses.add_action() }
 ---
@@ -2200,9 +2231,9 @@ columns:
   - Type: |
       row_item.display_name
   - Amount paid by you: |
-      currency(float(row_item.total(times_per_year=12)) - row_item.paid_by_other_monthly)
+      currency(float(row_item.total(times_per_year=12))) if not row_item.paid_by_other else currency(float(row_item.total(times_per_year=12)) - row_item.paid_by_other_monthly)
   - Amount paid by somebody else: |
-      currency(row_item.paid_by_other_monthly)
+      "$0" if not row_item.paid_by_other else currency(row_item.paid_by_other_monthly)
   - Total: |
       currency(row_item.total(times_per_year=12))
 edit:
@@ -2216,6 +2247,7 @@ variable name: children_expenses.terms_ordered
 data: !!omap
   - kids_clothes: "Clothing and Shoes"
   - kids_diapers: "Diapers"
+  - kids_childcare: "Out-of-Pocket Childcare Costs"
   - kids_lunch: "School lunches"
   - kids_supplies: "School supplies"
   - kids_activities: "Fees/expenses for special activities (e.g., piano lessons, sports)"
@@ -2243,6 +2275,13 @@ code: |
     temp_total += float(item.total(times_per_year=12) - item.paid_by_other_monthly_default)
   x.total_monthly_payment = temp_total
 ---
+generic object: ALExpenseList
+code: |
+  temp_total = 0
+  for item in children_expense:
+    temp_total += float(item.total(times_per_year=12) - item.paid_by_other_monthly_default)
+  x.total_monthly_payment = temp_total
+---
 id: children_expenses_ordered object
 objects:
   - children_expenses_ordered: DAOrderedDict.using(elements=children_expenses.terms_ordered, auto_gather=False, gathered=True)
@@ -2253,11 +2292,20 @@ question: |
   What kind of children expenses do you have?
 subquestion: |
   Be sure to look back over the last 12 months. Maybe you didn't have the expense last month, but you had it earlier in the year.
+  
+  % if out_of_pocket_costs > 0:
+  You said earlier that your out of pocket childcare costs is ${ currency(out_of_pocket_costs)} (the total childcare costs of ${currency(total_monthly_childcare_costs) } minus the subsidy ${ currency(childcare_subsidy) }).
+  
+  Because of this, "Out of Pocket Costs" is pre-selected below, and will have this amount.  You can still edit it after entering the information about all of the expenses.
+  % endif
 fields:
   - no label: children_expenses.selected_types
     datatype: checkboxes
     code: |
       children_expenses_ordered
+    default:
+      code: |
+        {'kids_childcare': out_of_pocket_costs > 0}
 ---
 id: children expense information
 reconsider: children_expenses[i].display_name
@@ -2280,22 +2328,18 @@ fields:
     default: 12
     code: |
       times_per_year_for_expenses
-  - Does anybody else pay all or part of this expense?: children_expenses[i].paid_by_other
-    datatype: yesnoradio
 
 validation code: |
   if children_expenses[i].source != "other":
     children_expenses[i].display_name = children_expenses.terms_ordered.get(children_expenses[i].source, children_expenses[i].source)
   else:
     children_expenses[i].display_name = children_expenses[i].source_other
-  if children_expenses[i].paid_by_other == False:
-    children_expenses[i].paid_by_other_monthly = 0
-  else:
-    if defined('children_expenses[i].paid_by_other_monthly') and children_expenses[i].paid_by_other_monthly <= children_expenses[i].total(times_per_year=12):
-      children_expenses[i].paid_by_other_monthly_default = children_expenses[i].paid_by_other_monthly
-    else:
-      children_expenses[i].paid_by_other_monthly_default = 0
-    invalidate('children_expenses[i].paid_by_other_monthly')
+
+---
+if: children_expenses[i].source == 'kids_childcare' and out_of_pocket_costs > 0
+code: |
+  children_expenses[i].value = out_of_pocket_costs
+  children_expenses[i].times_per_year = 12   
 ---
 id: children expense paid by others question
 question:  ${ children_expenses[i].display_name }
@@ -2324,11 +2368,13 @@ code: |
 id: want to add more expenses
 question: Do you want to list any more children expenses?
 subquestion: |
-  The total for the monthly expenses you pay is **${ currency(children_expenses.total_monthly_payment) }**
 
   Tap Next if you don't have more to add.
   
   ${ children_expenses_table }
+
+  **Total Children Expenses:**    ${ currency(children_expenses.total(times_per_year=12)) }
+ 
   
   ${ children_expenses.add_action() }
 continue button field: children_expenses.review_items
@@ -2349,10 +2395,6 @@ columns:
   - Type: |
       row_item.display_name
   - Amount paid by you: |
-      currency(float(row_item.total(times_per_year=12)) - row_item.paid_by_other_monthly)
-  - Amount paid by somebody else: |
-      currency(row_item.paid_by_other_monthly)
-  - Total: |
       currency(row_item.total(times_per_year=12))
 edit:
   - source
@@ -2367,6 +2409,11 @@ fields:
     datatype: currency
   - Subsidy: childcare_subsidy
     datatype: currency
+validation code: |
+  out_of_pocket_costs = total_monthly_childcare_costs - childcare_subsidy
+---
+code: |
+  children_expenses
 ---
 id: extraordinatry expenses
 question: Your Extraordinary Expenses For Children With ${ other_parties[0].name.full() }

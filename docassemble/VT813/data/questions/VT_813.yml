@@ -832,12 +832,27 @@ fields:
 ---
 id: how many itemized jobs
 question: |
-  How many jobs do you have?
+  Income from working
 fields:
-  - How many jobs do you have?: jobs.target_number
-    datatype: integer
-  - Do you receive self-employed income?: is_self_employed
+  - Do you have self-employed income?: is_self_employed
     datatype: yesnoradio
+  - Do you have other jobs?: has_jobs
+    datatype: yesnoradio
+  - field: jobs.target_number
+    label: |
+      How many jobs do you have?
+    datatype: integer
+    js show if: 
+      val("has_jobs") === true && val("is_self_employed") === false
+  - field: jobs.target_number
+    label: |
+      How many other jobs do you have? 
+    datatype: integer
+    js show if: 
+      val("has_jobs") === true && val("is_self_employed") === true
+validation code: |
+  if has_jobs == False:
+    jobs.target_number = 0
 ---
 id: sets jobs.target_number
 code: |
@@ -1180,9 +1195,9 @@ subquestion: |
   % if not is_self_employed:
   **$0**
   % elif has_schedule_c:
-  **${ currency(self_employed_net_income) }**  
+  **${ currency(self_employed_net_income/12) }**  
   % else:
-  **${ currency(net_income_order) }**
+  **${ currency(net_income_order/12) }**
   % endif
 
 

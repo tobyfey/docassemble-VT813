@@ -126,6 +126,7 @@ subquestion: |
   
   Only complete these questions if you have a self-employed business and you can't include an IRS Schedule C.
 fields:
+  - Description of your self-empoyed business: self_employed_description
   - Do you have a copy of your IRS Schedule C tax form?: has_schedule_c
     datatype: yesnoradio
   - note: |
